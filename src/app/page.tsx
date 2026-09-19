@@ -172,13 +172,25 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <section className="zone-ink !py-7">
             <div className="grid grid-cols-3 gap-4">
               {[
-                ["Income", pkr(income, { compact: true }), "text-white"],
-                ["Saved", pkr(savings, { compact: true }), "text-white"],
-                [`Incentive ${household.incentivePct}%`, pkr(incentive, { compact: true }), "text-acid"]
-              ].map(([label, value, tone], i) => (
+                ["Income", pkr(income, { compact: true }), "text-white", null],
+                [
+                  "Saved",
+                  pkr(savings, { compact: true }),
+                  "text-white",
+                  over ? "budget exceeded" : `of ${pkr(budget, { compact: true })} budget`
+                ],
+                [
+                  `Incentive ${household.incentivePct}%`,
+                  pkr(incentive, { compact: true }),
+                  over ? "text-white/40" : "text-acid",
+                  // A zero here is a real result, not a bug — say which.
+                  over ? "nothing saved this month" : `${household.incentivePct}% of what's saved`
+                ]
+              ].map(([label, value, tone, hint], i) => (
                 <div key={i}>
                   <div className="eyebrow text-white/45">{label}</div>
                   <div className={"money mt-2 text-[22px] font-bold lg:text-[26px] " + tone}>{value}</div>
+                  {hint && <div className="mt-1 text-[11px] font-semibold text-white/35">{hint}</div>}
                 </div>
               ))}
             </div>

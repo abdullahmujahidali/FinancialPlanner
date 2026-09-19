@@ -189,7 +189,7 @@ export default async function YearOverview({
           </section>
 
           {/* ── Busiest / quietest month ─────────────────────────────────── */}
-          {busiest && quietest && (
+          {busiest && quietest && busiest.label !== quietest.label && (
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-[18px] bg-card px-5 py-5 lg:px-6">
                 <div className="eyebrow text-muted">Highest spend</div>

@@ -56,6 +56,66 @@ export async function sellAsset(formData: FormData) {
   revalidatePath("/assets"); revalidatePath("/");
 }
 
+/** Ids arrive as form strings; anything that isn't a real row id is a no-op. */
+function rowId(v: FormDataEntryValue | null) {
+  const n = Number(v);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+export async function updateAsset(formData: FormData) {
+  const { household } = await requireContext();
+  const id = rowId(formData.get("id"));
+  if (!id) return;
+  const name = String(formData.get("name") || "").trim();
+  const price = Number(formData.get("purchasePrice") || 0);
+  if (!name || !price) return;
+  await db().update(t.assets).set(({
+    name,
+    purchaseDate: String(formData.get("purchaseDate") || todayStr()),
+    purchasePrice: price.toFixed(2),
+    notes: String(formData.get("notes") || "") || null
+  } as any)).where(and(eq(t.assets.householdId, household.id), eq(t.assets.id, id)));
+  revalidatePath("/assets"); revalidatePath("/"); revalidatePath("/year");
+}
+
+/**
+ * asset_values has no ON DELETE CASCADE, so the history rows have to go first
+ * or the foreign key blocks the parent delete.
+ */
+export async function deleteAsset(formData: FormData) {
+  const { household } = await requireContext();
+  const id = rowId(formData.get("id"));
+  if (!id) return;
+  const owned = await db().select({ id: t.assets.id }).from(t.assets)
+    .where(and(eq(t.assets.householdId, household.id), eq(t.assets.id, id))).limit(1);
+  if (!owned.length) return;
+
+  await db().delete(t.assetValues).where(eq(t.assetValues.assetId, id));
+  await db().delete(t.attachments)
+    .where(and(eq(t.attachments.householdId, household.id), eq(t.attachments.assetId, id)));
+  await db().delete(t.assets)
+    .where(and(eq(t.assets.householdId, household.id), eq(t.assets.id, id)));
+
+  revalidatePath("/assets"); revalidatePath("/"); revalidatePath("/year");
+  redirect("/assets");
+}
+
+/** One revaluation row. Ownership is proven through its parent asset. */
+export async function deleteAssetValue(formData: FormData) {
+  const { household } = await requireContext();
+  const id = rowId(formData.get("id"));
+  if (!id) return;
+  const [row] = await db()
+    .select({ id: t.assetValues.id })
+    .from(t.assetValues)
+    .innerJoin(t.assets, eq(t.assets.id, t.assetValues.assetId))
+    .where(and(eq(t.assetValues.id, id), eq(t.assets.householdId, household.id)))
+    .limit(1);
+  if (!row) return;
+  await db().delete(t.assetValues).where(eq(t.assetValues.id, id));
+  revalidatePath("/assets"); revalidatePath("/"); revalidatePath("/year");
+}
+
 export async function addGoal(formData: FormData) {
   const { household } = await requireContext();
   const name = String(formData.get("name") || "").trim();

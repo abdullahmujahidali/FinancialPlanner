@@ -1,11 +1,13 @@
+import Link from "next/link";
 import Shell from "@/components/Shell";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { asc, desc, eq } from "drizzle-orm";
-import { addAsset, revalueAsset, sellAsset } from "@/actions/portfolio";
+import { addAsset, revalueAsset, sellAsset, deleteAsset } from "@/actions/portfolio";
 import { pkr, todayStr } from "@/lib/money";
-import { Plus, Building2 } from "lucide-react";
+import { Plus, Building2, ChevronRight } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
+import ConfirmDelete from "@/components/ConfirmDelete";
 
 export const dynamic = "force-dynamic";
 
@@ -69,28 +71,41 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                 return (
                   <div key={a.id}
                     className={"overflow-hidden rounded-[22px] bg-card " + (a.status === "sold" ? "opacity-60" : "")}>
-                    <div className="flex items-start justify-between gap-4 p-6 lg:p-7">
-                      <div className="flex min-w-0 items-center gap-4">
-                        {photoByAsset.has(a.id) && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={`/api/attachment/${photoByAsset.get(a.id)}`} alt=""
-                            className="h-14 w-14 shrink-0 rounded-[14px] object-cover" />
-                        )}
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 text-[16px] font-bold">
-                            <span className="truncate">{a.name}</span>
-                            {a.status === "sold" && <span className="tag-muted">sold</span>}
-                          </div>
-                          <div className="num mt-1.5 text-[13px] font-medium text-muted">
-                            Bought {a.purchaseDate.slice(0, 4)} for {pkr(Number(a.purchasePrice), { compact: true })}
+                    {/* The link and the delete button are siblings: a <form>
+                        may never be nested inside an <a>. */}
+                    <div className="flex items-start gap-2 p-6 lg:p-7">
+                      <Link
+                        href={`/assets/${a.id}`}
+                        className="flex min-w-0 flex-1 items-start justify-between gap-4 rounded-[14px] transition hover:opacity-70"
+                      >
+                        <div className="flex min-w-0 items-center gap-4">
+                          {photoByAsset.has(a.id) && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={`/api/attachment/${photoByAsset.get(a.id)}`} alt=""
+                              className="h-14 w-14 shrink-0 rounded-[14px] object-cover" />
+                          )}
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 text-[16px] font-bold">
+                              <span className="truncate">{a.name}</span>
+                              {a.status === "sold" && <span className="tag-muted">sold</span>}
+                            </div>
+                            <div className="num mt-1.5 text-[13px] font-medium text-muted">
+                              Bought {a.purchaseDate.slice(0, 4)} for {pkr(Number(a.purchasePrice), { compact: true })}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <div className="money text-[20px] font-bold">{pkr(v.latest, { compact: true })}</div>
-                        <div className={"num mt-1 text-[13px] font-bold " + (delta >= 0 ? "text-good" : "text-over")}>
-                          {delta >= 0 ? "+" : ""}{pkr(delta, { compact: true })}
+                        <div className="flex shrink-0 items-center gap-1.5 text-right">
+                          <div>
+                            <div className="money text-[20px] font-bold">{pkr(v.latest, { compact: true })}</div>
+                            <div className={"num mt-1 text-[13px] font-bold " + (delta >= 0 ? "text-good" : "text-over")}>
+                              {delta >= 0 ? "+" : ""}{pkr(delta, { compact: true })}
+                            </div>
+                          </div>
+                          <ChevronRight size={17} strokeWidth={2.4} className="text-muted" />
                         </div>
+                      </Link>
+                      <div className="shrink-0">
+                        <ConfirmDelete id={a.id} label={a.name} action={deleteAsset} />
                       </div>
                     </div>
                     {a.status === "active" && (

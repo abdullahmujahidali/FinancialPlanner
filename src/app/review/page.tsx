@@ -2,17 +2,24 @@ import Shell from "@/components/Shell";
 import EmptyState from "@/components/EmptyState";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
-import { and, asc, eq } from "drizzle-orm";
-import { resolveReview, askAboutTransaction, answerQuestion } from "@/actions/ledger";
-import QuestionThread from "@/components/QuestionThread";
+import { and, asc, eq, inArray } from "drizzle-orm";
+import { resolveReview } from "@/actions/ledger";
+import { addComment, deleteComment, toggleReaction } from "@/actions/comments";
+import CommentThread, { groupThreads } from "@/components/CommentThread";
 import { pkr } from "@/lib/money";
 import { Check } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReviewPage() {
-  const { household } = await requireContext();
-  const [pending, categories, persons, accounts, members] = await Promise.all([
+  const { user, household } = await requireContext();
+
+  /**
+   * The review queue is a fixed slice of the household's transactions, so the
+   * comment rows can't be fetched alongside it — the ids aren't known yet. One
+   * extra round trip for the whole page, not one per row.
+   */
+  const [pending, categories, persons, accounts, membersList] = await Promise.all([
     db().select().from(t.transactions)
       .where(and(eq(t.transactions.householdId, household.id), eq(t.transactions.needsReview, true)))
       .orderBy(asc(t.transactions.txDate)).limit(100),
@@ -25,8 +32,33 @@ export default async function ReviewPage() {
       .where(eq(t.memberships.householdId, household.id))
   ]);
 
+  const ids = pending.map((tx) => tx.id);
+
+  // inArray([]) is invalid SQL on some drivers — an empty queue skips both.
+  const commentRows = ids.length
+    ? await db().select({
+        id: t.comments.id, body: t.comments.body, createdAt: t.comments.createdAt,
+        userId: t.comments.userId, entityId: t.comments.entityId, authorName: t.users.name
+      }).from(t.comments)
+        .innerJoin(t.users, eq(t.users.id, t.comments.userId))
+        .where(and(
+          eq(t.comments.householdId, household.id),
+          eq(t.comments.entityType, "transaction"),
+          inArray(t.comments.entityId, ids)
+        ))
+    : [];
+
+  const reactionRows = commentRows.length
+    ? await db().select({
+        commentId: t.commentReactions.commentId,
+        userId: t.commentReactions.userId,
+        emoji: t.commentReactions.emoji
+      }).from(t.commentReactions)
+        .where(inArray(t.commentReactions.commentId, commentRows.map((c) => c.id)))
+    : [];
+
+  const threads = groupThreads(commentRows, reactionRows, user.id);
   const accountName = new Map(accounts.map((a) => [a.id, a.name]));
-  const userName = new Map(members.map((m) => [m.id, m.name]));
 
   return (
     <Shell
@@ -125,15 +157,15 @@ export default async function ReviewPage() {
             </form>
 
             {/* Sibling of the form above — HTML forbids nesting forms. */}
-            <QuestionThread
-              id={tx.id}
-              question={tx.reviewNote}
-              answer={tx.reviewAnswer}
-              askedBy={tx.reviewAskedBy ? userName.get(tx.reviewAskedBy) : null}
-              answeredBy={tx.reviewAnsweredBy ? userName.get(tx.reviewAnsweredBy) : null}
-              answeredAt={tx.reviewAnsweredAt}
-              ask={askAboutTransaction}
-              answerAction={answerQuestion}
+            <CommentThread
+              entityType="transaction"
+              entityId={tx.id}
+              comments={threads.get(tx.id) ?? []}
+              currentUserId={user.id}
+            members={membersList}
+              addAction={addComment}
+              deleteAction={deleteComment}
+              reactAction={toggleReaction}
             />
             </div>
           ))}

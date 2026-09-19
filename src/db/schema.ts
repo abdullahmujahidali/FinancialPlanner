@@ -179,3 +179,30 @@ export const notifications = pgTable("notifications", {
   readAt: timestamp("read_at"),
   createdAt: timestamp("created_at").notNull().defaultNow()
 });
+
+// ---------- conversation ----------
+/**
+ * Threaded comments, attachable to any entity.
+ *
+ * Replaces the single reviewNote/reviewAnswer pair: real exchanges need
+ * follow-ups ("which plot?" → "LDA City"). Generic over entity so the same
+ * thread UI serves transactions, assets and goals rather than three tables.
+ */
+export const comments = pgTable("comments", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id),
+  entityType: text("entity_type").notNull(), // transaction | asset | goal
+  entityId: integer("entity_id"),
+  userId: integer("user_id").notNull().references(() => users.id),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+});
+
+/** One row per (comment, user, emoji) — a unique index makes toggling idempotent. */
+export const commentReactions = pgTable("comment_reactions", {
+  id: serial("id").primaryKey(),
+  commentId: integer("comment_id").notNull().references(() => comments.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  emoji: text("emoji").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+});

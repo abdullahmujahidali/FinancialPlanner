@@ -2,9 +2,10 @@ import Shell from "@/components/Shell";
 import Link from "next/link";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
-import { and, asc, desc, eq, gte, ilike, lt, SQL } from "drizzle-orm";
-import { deleteTransaction, askAboutTransaction, answerQuestion } from "@/actions/ledger";
-import QuestionThread from "@/components/QuestionThread";
+import { and, asc, desc, eq, gte, ilike, inArray, lt, SQL } from "drizzle-orm";
+import { deleteTransaction } from "@/actions/ledger";
+import { addComment, deleteComment, toggleReaction } from "@/actions/comments";
+import CommentThread, { groupThreads } from "@/components/CommentThread";
 import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ConfirmDelete from "@/components/ConfirmDelete";
@@ -30,7 +31,7 @@ function idOf(v?: string) {
 
 export default async function LedgerPage({ searchParams }: { searchParams: Promise<Params> }) {
   const sp = await searchParams;
-  const { household } = await requireContext();
+  const { user, household } = await requireContext();
   const m = sp.m || monthKey();
   const { from, next } = monthRange(m);
 
@@ -66,7 +67,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
 
   // One round trip for all four: the database is ~150ms away, so sequential
   // awaits here would cost half a second of blank page.
-  const [rows, categories, persons, accounts, members] = await Promise.all([
+  const [rows, categories, persons, accounts, membersList] = await Promise.all([
     db().select({
       tx: t.transactions, category: t.categories.name, person: t.persons.name, account: t.accounts.name
     }).from(t.transactions)
@@ -88,8 +89,36 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
       .where(eq(t.memberships.householdId, household.id))
   ]);
 
-  // Who asked/answered a question, for the thread under each row.
-  const userName = new Map(members.map((mb) => [mb.id, mb.name]));
+  /**
+   * Comments for the rows actually on screen. Which rows those are is only known
+   * after the query above, so this is a second round trip — but two queries for
+   * the whole page, never one per row.
+   */
+  const ids = rows.map(({ tx }) => tx.id);
+  const commentRows = ids.length
+    ? await db().select({
+        id: t.comments.id, body: t.comments.body, createdAt: t.comments.createdAt,
+        userId: t.comments.userId, entityId: t.comments.entityId, authorName: t.users.name
+      }).from(t.comments)
+        .innerJoin(t.users, eq(t.users.id, t.comments.userId))
+        .where(and(
+          eq(t.comments.householdId, household.id),
+          eq(t.comments.entityType, "transaction"),
+          inArray(t.comments.entityId, ids)
+        ))
+    : [];
+
+  // inArray([]) is invalid SQL on some drivers, so both lookups are guarded.
+  const reactionRows = commentRows.length
+    ? await db().select({
+        commentId: t.commentReactions.commentId,
+        userId: t.commentReactions.userId,
+        emoji: t.commentReactions.emoji
+      }).from(t.commentReactions)
+        .where(inArray(t.commentReactions.commentId, commentRows.map((c) => c.id)))
+    : [];
+
+  const threads = groupThreads(commentRows, reactionRows, user.id);
 
   // What the list actually costs the household: spend only, reimbursed bills out.
   const shownSpend = rows.reduce(
@@ -186,15 +215,15 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                   </div>
                 </div>
 
-                <QuestionThread
-                  id={tx.id}
-                  question={tx.reviewNote}
-                  answer={tx.reviewAnswer}
-                  askedBy={tx.reviewAskedBy ? userName.get(tx.reviewAskedBy) : null}
-                  answeredBy={tx.reviewAnsweredBy ? userName.get(tx.reviewAnsweredBy) : null}
-                  answeredAt={tx.reviewAnsweredAt}
-                  ask={askAboutTransaction}
-                  answerAction={answerQuestion}
+                <CommentThread
+                  entityType="transaction"
+                  entityId={tx.id}
+                  comments={threads.get(tx.id) ?? []}
+                  currentUserId={user.id}
+            members={membersList}
+                  addAction={addComment}
+                  deleteAction={deleteComment}
+                  reactAction={toggleReaction}
                 />
               </div>
             );
