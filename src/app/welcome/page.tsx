@@ -105,17 +105,17 @@ function Header() {
 function Hero() {
   return (
     <section className={`${SHELL} pb-4`}>
-      <div className="zone-acid overflow-hidden text-center lg:p-14 2xl:p-16">
-        <p className="eyebrow mb-5">The shared family ledger</p>
-        <h1 className="mx-auto max-w-[14ch] font-display text-[42px] font-extrabold leading-[0.92] tracking-[-0.045em] sm:text-[62px] lg:text-[80px] 2xl:text-[92px]">
+      <div className="zone-acid overflow-hidden px-5 py-10 text-center sm:px-8 sm:py-12 lg:p-14 2xl:p-16">
+        <p className="eyebrow mb-4 text-[10px] sm:text-[11px] lg:mb-5">The shared family ledger</p>
+        <h1 className="mx-auto max-w-[14ch] font-display text-[32px] font-extrabold leading-[0.95] tracking-[-0.04em] sm:text-[48px] sm:leading-[0.92] sm:tracking-[-0.045em] lg:text-[76px] 2xl:text-[92px]">
           Every expense, carried together.
         </h1>
-        <p className="mx-auto mt-6 max-w-[54ch] text-[16px] font-semibold leading-relaxed lg:mt-7 lg:text-[19px]">
+        <p className="mx-auto mt-5 max-w-[30ch] text-[15px] font-semibold leading-relaxed sm:max-w-[54ch] sm:text-[16px] lg:mt-7 lg:text-[19px]">
           {BRAND.name} replaces the household spreadsheet. Import your bank statement, agree on
           what each line actually was, and watch the month's savings add up — together, not in
           one person's head.
         </p>
-        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row lg:mt-10">
+        <div className="mt-7 flex flex-col justify-center gap-2.5 sm:flex-row sm:gap-3 lg:mt-10">
           <Link href="/login?mode=signup" className="btn justify-center">
             Start your book <ArrowRight size={17} />
           </Link>
@@ -123,7 +123,7 @@ function Hero() {
             Try it right here
           </Link>
         </div>
-        <p className="mt-5 text-[13px] font-semibold opacity-70">
+        <p className="mt-5 text-[12.5px] font-semibold opacity-70 sm:text-[13px]">
           Free for your family. No card, and never your bank password.
         </p>
       </div>
@@ -154,7 +154,7 @@ function ProofStrip() {
       <div className="zone-ink grid gap-7 sm:grid-cols-3 lg:p-10 2xl:p-12">
         {stats.map(([figure, caption]) => (
           <div key={caption}>
-            <p className="money-xl text-[36px] text-acid lg:text-[44px] 2xl:text-[52px]">{figure}</p>
+            <p className="money-xl text-[30px] text-acid sm:text-[36px] lg:text-[44px] 2xl:text-[52px]">{figure}</p>
             <p className="mt-2.5 max-w-[26ch] text-[13px] font-semibold leading-snug text-white/70 2xl:text-[14px]">
               {caption}
             </p>
@@ -173,7 +173,7 @@ function TryIt() {
       <div className="grid items-center gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:gap-14">
         <div>
           <p className="eyebrow text-muted">Try it — this one really works</p>
-          <h2 className="mt-3 max-w-[16ch] font-display text-[30px] font-extrabold leading-[1.02] tracking-[-0.035em] lg:text-[46px] 2xl:text-[52px]">
+          <h2 className="mt-3 max-w-[16ch] font-display text-[25px] font-extrabold leading-[1.05] tracking-[-0.03em] sm:text-[30px] sm:leading-[1.02] sm:tracking-[-0.035em] lg:text-[46px] 2xl:text-[52px]">
             The review queue, in your hands.
           </h2>
           <p className="mt-5 max-w-[48ch] text-[15px] font-medium leading-relaxed text-muted lg:text-[16px]">
@@ -232,7 +232,7 @@ function Features() {
     <section className={`${SHELL} pb-10 lg:pb-16`}>
       <div className="mb-8 lg:mb-12">
         <p className="eyebrow text-muted">What's inside</p>
-        <h2 className="mt-3 max-w-[18ch] font-display text-[30px] font-extrabold leading-[1.02] tracking-[-0.035em] lg:text-[46px] 2xl:text-[54px]">
+        <h2 className="mt-3 max-w-[18ch] font-display text-[25px] font-extrabold leading-[1.05] tracking-[-0.03em] sm:text-[30px] sm:leading-[1.02] sm:tracking-[-0.035em] lg:text-[46px] 2xl:text-[54px]">
           Built for how a family actually does this.
         </h2>
       </div>
@@ -271,7 +271,7 @@ function Tenancy() {
       <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="zone-card shadow-soft lg:p-10 2xl:p-12">
           <p className="eyebrow text-muted">One book per household</p>
-          <h2 className="mt-3 font-display text-[28px] font-extrabold leading-[1.05] tracking-[-0.03em] lg:text-[38px] 2xl:text-[44px]">
+          <h2 className="mt-3 font-display text-[24px] font-extrabold leading-[1.06] tracking-[-0.03em] sm:text-[28px] sm:leading-[1.05] lg:text-[38px] 2xl:text-[44px]">
             A truss shares the load.
           </h2>
           <p className="mt-5 max-w-[52ch] text-[15px] font-medium leading-relaxed text-muted 2xl:text-[16px]">
@@ -307,8 +307,8 @@ function Tenancy() {
 function Closer() {
   return (
     <section className={`${SHELL} pb-10 lg:pb-16`}>
-      <div className="zone-acid text-center lg:p-16 2xl:p-20">
-        <h2 className="mx-auto max-w-[16ch] font-display text-[34px] font-extrabold leading-[0.98] tracking-[-0.04em] lg:text-[58px] 2xl:text-[68px]">
+      <div className="zone-acid px-5 py-10 text-center sm:px-8 sm:py-12 lg:p-16 2xl:p-20">
+        <h2 className="mx-auto max-w-[16ch] font-display text-[28px] font-extrabold leading-[1.02] tracking-[-0.035em] sm:text-[34px] sm:leading-[0.98] sm:tracking-[-0.04em] lg:text-[58px] 2xl:text-[68px]">
           Close this month properly.
         </h2>
         <p className="mx-auto mt-5 max-w-[46ch] text-[16px] font-semibold lg:text-[18px] 2xl:text-[20px]">
