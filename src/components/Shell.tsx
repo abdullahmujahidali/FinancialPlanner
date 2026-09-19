@@ -2,7 +2,7 @@ import Nav from "./Nav";
 import Sidebar from "./Sidebar";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { logout } from "@/actions/auth";
 import { markAllRead, dismiss } from "@/actions/notifications";
 import NotificationBell from "./NotificationBell";
@@ -37,7 +37,12 @@ export default async function Shell({
     db()
       .select()
       .from(t.notifications)
-      .where(eq(t.notifications.householdId, household.id))
+      .where(and(
+        eq(t.notifications.householdId, household.id),
+        // not addressed to someone else, and not caused by me
+        or(isNull(t.notifications.userId), eq(t.notifications.userId, user.id)),
+        or(isNull(t.notifications.excludeUserId), ne(t.notifications.excludeUserId, user.id))
+      ))
       .orderBy(desc(t.notifications.createdAt))
       .limit(12)
   ]);
@@ -47,7 +52,7 @@ export default async function Shell({
       <Sidebar household={household.name} reviewCount={Number(review.v)} />
       <div
         className={
-          "mx-auto min-h-screen px-4 pb-32 pt-[max(1.25rem,env(safe-area-inset-top))] lg:px-12 lg:pb-16 lg:pt-10 " +
+          "mx-auto min-h-screen px-4 pb-40 pt-[max(1.25rem,env(safe-area-inset-top))] lg:px-12 lg:pb-16 lg:pt-10 " +
           (wide ? "max-w-lg lg:max-w-none xl:max-w-[1500px]" : "max-w-lg lg:max-w-3xl")
         }
       >

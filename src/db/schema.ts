@@ -172,6 +172,8 @@ export const notifications = pgTable("notifications", {
   householdId: integer("household_id").notNull().references(() => households.id),
   // null = everyone in the household sees it
   userId: integer("user_id").references(() => users.id),
+  // Whoever caused the event: they should not be told about their own action.
+  excludeUserId: integer("exclude_user_id").references(() => users.id),
   kind: text("kind").notNull(), // import | budget | goal | review | asset
   title: text("title").notNull(),
   body: text("body"),

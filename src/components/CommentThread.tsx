@@ -136,7 +136,8 @@ export default function CommentThread({
   members,
   addAction,
   deleteAction,
-  reactAction
+  reactAction,
+  compact = false
 }: {
   entityType: "transaction" | "asset" | "goal";
   entityId: number;
@@ -147,6 +148,12 @@ export default function CommentThread({
   addAction: (fd: FormData) => void;
   deleteAction: (fd: FormData) => void;
   reactAction: (fd: FormData) => void;
+  /**
+   * For lists whose job is scanning, not discussing (the ledger). Silent when a
+   * row has no comments, and one quiet folded line when it has some. The review
+   * queue leaves this off: there, the conversation *is* the page.
+   */
+  compact?: boolean;
 }) {
   const reply = (
     <CommentComposer
@@ -158,8 +165,10 @@ export default function CommentThread({
   );
 
   // Nothing said yet — stay out of the way. The ledger is a list of money, not
-  // a list of empty comment boxes.
+  // a list of empty comment boxes. Compact goes further and renders nothing at
+  // all: 56 rows of "Add a note" is noise, and the row is still clickable.
   if (comments.length === 0) {
+    if (compact) return null;
     return (
       <details className="mt-3">
         <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-[12px] font-bold text-muted transition hover:text-ink">
@@ -171,8 +180,8 @@ export default function CommentThread({
     );
   }
 
-  return (
-    <div className="mt-3 overflow-hidden rounded-[14px] bg-page">
+  const thread = (
+    <div className="overflow-hidden rounded-[14px] bg-page">
       {comments.map((c) => (
         <div key={c.id} className="group border-b border-line px-4 py-3">
           <div className="flex items-start justify-between gap-3">
@@ -241,4 +250,20 @@ export default function CommentThread({
       <div className="px-4 py-3">{reply}</div>
     </div>
   );
+
+  // Compact: one line that says how much conversation is here, folded shut so
+  // the list keeps its rhythm until someone actually wants to read it.
+  if (compact) {
+    return (
+      <details className="mt-2">
+        <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-[12px] font-bold text-muted transition hover:text-ink">
+          <MessageCircle size={14} strokeWidth={2.2} />
+          {comments.length} {comments.length === 1 ? "note" : "notes"}
+        </summary>
+        <div className="mt-2.5">{thread}</div>
+      </details>
+    );
+  }
+
+  return <div className="mt-3">{thread}</div>;
 }

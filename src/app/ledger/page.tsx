@@ -7,7 +7,7 @@ import { deleteTransaction } from "@/actions/ledger";
 import { addComment, deleteComment, toggleReaction } from "@/actions/comments";
 import CommentThread, { groupThreads } from "@/components/CommentThread";
 import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 import ConfirmDelete from "@/components/ConfirmDelete";
 import LedgerFilters from "@/components/LedgerFilters";
 
@@ -189,10 +189,13 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                         : { weekday: "short", day: "numeric", month: "short" })}
                   </div>
                 )}
-                <div className={"flex items-start justify-between gap-4 px-6 py-4 lg:px-8 "
+                <div className={"flex items-start justify-between gap-3 px-5 py-4 sm:gap-4 sm:px-6 lg:px-8 "
                   + (i < rows.length - 1 && rows[i + 1].tx.txDate === tx.txDate ? "rule-row" : "")}>
                   <div className="min-w-0">
-                    <div className="truncate text-[15px] font-semibold">{tx.description || category || tx.type}</div>
+                    {/* Two lines rather than a hard truncate: a bank description
+                        is the only handle a row has, and "Raast P2P Fund trans…"
+                        identifies nothing. */}
+                    <div className="line-clamp-2 text-[15px] font-semibold">{tx.description || category || tx.type}</div>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] font-medium text-muted">
                       <span>{account}</span>
                       {category && <span>· {category}</span>}
@@ -203,28 +206,58 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                       {tx.type === "transfer" && <span className="tag-muted">transfer</span>}
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
+                  <div className="flex shrink-0 items-center gap-1 sm:gap-3">
                     <span className={"num text-[15px] font-bold " + (tx.type === "income" ? "text-good" : "")}>
                       {tx.type === "income" ? "+" : ""}{pkr(Number(tx.amount))}
                     </span>
-                    <ConfirmDelete
-                      id={tx.id}
-                      label={tx.description || category || tx.type}
-                      action={deleteTransaction}
-                    />
+                    {/* Deleting is rare; reading the row is constant. On a phone
+                        the bin hides behind ⋯ so its width goes to the
+                        description; from sm: up it sits in the row as before.
+                        Still reachable on a phone — there is no other delete. */}
+                    <details className="group relative sm:hidden">
+                      <summary
+                        aria-label={`More actions for ${tx.description || category || tx.type}`}
+                        className="flex h-8 w-7 cursor-pointer list-none items-center justify-center rounded-full text-muted transition group-open:bg-page"
+                      >
+                        <MoreHorizontal size={16} strokeWidth={2.4} />
+                      </summary>
+                      <div className="absolute right-0 z-10 mt-1 rounded-full bg-card p-0.5 shadow-soft">
+                        <ConfirmDelete
+                          id={tx.id}
+                          label={tx.description || category || tx.type}
+                          action={deleteTransaction}
+                        />
+                      </div>
+                    </details>
+
+                    <span className="hidden sm:block">
+                      <ConfirmDelete
+                        id={tx.id}
+                        label={tx.description || category || tx.type}
+                        action={deleteTransaction}
+                      />
+                    </span>
                   </div>
                 </div>
 
-                <CommentThread
-                  entityType="transaction"
-                  entityId={tx.id}
-                  comments={threads.get(tx.id) ?? []}
-                  currentUserId={user.id}
-            members={membersList}
-                  addAction={addComment}
-                  deleteAction={deleteComment}
-                  reactAction={toggleReaction}
-                />
+                {/* Compact: silent unless this row actually has notes, and then
+                    one folded line — an open composer under all 56 rows is what
+                    broke the list's rhythm. Only padded when it renders. */}
+                {(threads.get(tx.id)?.length ?? 0) > 0 && (
+                  <div className="px-5 pb-4 sm:px-6 lg:px-8">
+                    <CommentThread
+                      entityType="transaction"
+                      entityId={tx.id}
+                      comments={threads.get(tx.id) ?? []}
+                      currentUserId={user.id}
+                      members={membersList}
+                      addAction={addComment}
+                      deleteAction={deleteComment}
+                      reactAction={toggleReaction}
+                      compact
+                    />
+                  </div>
+                )}
               </div>
             );
           })}

@@ -3,10 +3,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Menu as MenuIcon, X, Building2, Target, Inbox, Upload, Settings, LogOut
+  Menu as MenuIcon, X, Building2, Target, Inbox, Upload, Settings, LogOut, CalendarRange
 } from "lucide-react";
 
 const links = [
+  { href: "/year", label: "Year overview", Icon: CalendarRange },
   { href: "/assets", label: "Assets", Icon: Building2 },
   { href: "/goals", label: "Goals", Icon: Target },
   { href: "/review", label: "Review queue", Icon: Inbox },

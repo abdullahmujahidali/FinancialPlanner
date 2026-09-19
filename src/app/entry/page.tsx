@@ -2,8 +2,10 @@ import Shell from "@/components/Shell";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { and, asc, eq } from "drizzle-orm";
-import { addTransaction } from "@/actions/ledger";
+import { addTransaction, quickAddCategory, quickAddPerson } from "@/actions/ledger";
 import { todayStr } from "@/lib/money";
+import SearchableSelect from "@/components/SearchableSelect";
+import FlagToggles from "@/components/FlagToggles";
 
 export const dynamic = "force-dynamic";
 
@@ -56,41 +58,47 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
         </div>
 
         <div className="grid gap-5 rounded-[22px] bg-card p-6 lg:grid-cols-2 lg:p-8">
-          <label className="block">
-            <span className="eyebrow text-muted">From / account</span>
-            <select name="accountId" className="field mt-2">
-              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
-          </label>
+          <SearchableSelect
+            name="accountId"
+            label="From / account"
+            options={accounts.map((a) => ({ id: a.id, name: a.name }))}
+            defaultValue={accounts[0]?.id ?? null}
+            placeholder="Search accounts…"
+          />
 
           <label className="block">
             <span className="eyebrow text-muted">Date</span>
             <input name="txDate" type="date" defaultValue={todayStr()} className="field mt-2" />
           </label>
 
-          <label className="block">
-            <span className="eyebrow text-muted">To (transfers only)</span>
-            <select name="counterAccountId" className="field mt-2">
-              <option value="">—</option>
-              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
-          </label>
+          <SearchableSelect
+            name="counterAccountId"
+            label="To (transfers only)"
+            options={accounts.map((a) => ({ id: a.id, name: a.name }))}
+            emptyLabel="—"
+            placeholder="Search accounts…"
+          />
 
-          <label className="block">
-            <span className="eyebrow text-muted">Category</span>
-            <select name="categoryId" className="field mt-2">
-              <option value="">—</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </label>
+          <SearchableSelect
+            name="categoryId"
+            label="Category"
+            options={categories.map((c) => ({ id: c.id, name: c.name }))}
+            emptyLabel="—"
+            placeholder="Search or type a new one…"
+            allowCreate={{ action: quickAddCategory, label: "Create" }}
+          />
 
-          <label className="block lg:col-span-2">
-            <span className="eyebrow text-muted">Person <span className="font-semibold normal-case tracking-normal text-muted">— default is the whole household</span></span>
-            <select name="personId" className="field mt-2">
-              <option value="">Household</option>
-              {persons.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </label>
+          <div className="lg:col-span-2">
+            <SearchableSelect
+              name="personId"
+              label="Person"
+              hint={<span className="font-semibold normal-case tracking-normal text-muted"> — default is the whole household</span>}
+              options={persons.map((p) => ({ id: p.id, name: p.name }))}
+              emptyLabel="Household"
+              placeholder="Search or type a new one…"
+              allowCreate={{ action: quickAddPerson, label: "Create" }}
+            />
+          </div>
 
           <label className="block lg:col-span-2">
             <span className="eyebrow text-muted">Note</span>
@@ -98,20 +106,7 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
           </label>
         </div>
 
-        <fieldset className="rounded-[22px] bg-card p-6 lg:p-8">
-          <legend className="eyebrow text-muted">Flags</legend>
-          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-3.5 text-[14px] font-semibold">
-            <label className="flex items-center gap-2">
-              <input type="checkbox" name="isAbnormal" className="h-4 w-4 rounded accent-ink" /> One-off / abnormal
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" name="isPassthrough" className="h-4 w-4 rounded accent-ink" /> Pass-through (reimbursed)
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" name="needsReview" className="h-4 w-4 rounded accent-ink" /> Flag a question
-            </label>
-          </div>
-        </fieldset>
+        <FlagToggles />
 
         <label className="block rounded-[22px] bg-card p-6 lg:p-8">
           <span className="eyebrow text-muted">Receipt / photo <span className="font-semibold normal-case tracking-normal">— up to 2 MB</span></span>

@@ -49,6 +49,42 @@ export async function addTransaction(formData: FormData) {
   redirect("/entry?ok=1");
 }
 
+/**
+ * Create a category from the entry form.
+ *
+ * Without this you have to abandon a half-typed entry, go to Settings, add the
+ * category, and start over — so entries got filed under whatever already
+ * existed. Returns the new row so the picker can select it immediately.
+ */
+export async function quickAddCategory(formData: FormData): Promise<{ id: number; name: string } | void> {
+  const { household } = await requireContext();
+  const name = String(formData.get("name") || "").trim();
+  if (!name) return;
+
+  const [row] = await db()
+    .insert(t.categories)
+    .values({ householdId: household.id, name })
+    .returning();
+
+  revalidatePath("/entry"); revalidatePath("/settings");
+  return { id: row.id, name: row.name };
+}
+
+/** Same as quickAddCategory, for people. */
+export async function quickAddPerson(formData: FormData): Promise<{ id: number; name: string } | void> {
+  const { household } = await requireContext();
+  const name = String(formData.get("name") || "").trim();
+  if (!name) return;
+
+  const [row] = await db()
+    .insert(t.persons)
+    .values({ householdId: household.id, name })
+    .returning();
+
+  revalidatePath("/entry"); revalidatePath("/settings");
+  return { id: row.id, name: row.name };
+}
+
 export async function deleteTransaction(formData: FormData) {
   const { household } = await requireContext();
   const id = Number(formData.get("id"));

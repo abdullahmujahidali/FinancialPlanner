@@ -36,23 +36,32 @@ export function currencySymbol(code?: string | null) {
   return (CURRENCIES[String(code || "PKR").toUpperCase()] ?? CURRENCIES.PKR).symbol;
 }
 
-export function pkr(n: number | string, opts: { compact?: boolean } = {}) {
+/**
+ * Format an amount in the household's currency.
+ *
+ * `bare: true` drops the symbol for places that already say what the unit is
+ * (a column header, a field labelled "Amount (PKR)"). Everywhere else the
+ * symbol is shown — a ledger of unlabelled numbers is ambiguous the moment a
+ * second currency exists.
+ */
+export function pkr(n: number | string, opts: { compact?: boolean; bare?: boolean } = {}) {
   const v = typeof n === "string" ? Number(n) : n;
   if (!isFinite(v)) return "—";
   const sign = v < 0 ? "−" : "";
   const a = Math.abs(v);
+  const sym = opts.bare ? "" : current.symbol + " ";
 
   if (opts.compact) {
     if (current.lakh) {
-      if (a >= 1e7) return `${sign}${trim(a / 1e7)} Cr`;
-      if (a >= 1e5) return `${sign}${trim(a / 1e5)} L`;
+      if (a >= 1e7) return `${sign}${sym}${trim(a / 1e7)} Cr`;
+      if (a >= 1e5) return `${sign}${sym}${trim(a / 1e5)} L`;
     } else {
-      if (a >= 1e9) return `${sign}${trim(a / 1e9)}B`;
-      if (a >= 1e6) return `${sign}${trim(a / 1e6)}M`;
+      if (a >= 1e9) return `${sign}${sym}${trim(a / 1e9)}B`;
+      if (a >= 1e6) return `${sign}${sym}${trim(a / 1e6)}M`;
     }
-    if (a >= 1e3) return `${sign}${trim(a / 1e3)}k`;
+    if (a >= 1e3) return `${sign}${sym}${trim(a / 1e3)}k`;
   }
-  return sign + new Intl.NumberFormat(current.locale, { maximumFractionDigits: 0 }).format(a);
+  return sign + sym + new Intl.NumberFormat(current.locale, { maximumFractionDigits: 0 }).format(a);
 }
 
 const trim = (x: number) => (Math.round(x * 100) / 100).toString();

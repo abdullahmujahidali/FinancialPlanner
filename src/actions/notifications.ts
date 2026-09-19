@@ -82,6 +82,13 @@ export async function notify(opts: {
   title: string;
   body?: string;
   href?: string;
+  /**
+   * Who should NOT see this — normally the person who caused it. Without this
+   * you get told "Abdullah mentioned you" about your own comment.
+   */
+  exceptUserId?: number;
+  /** Deliver to exactly one person (an @mention). Omit for the whole household. */
+  userId?: number;
 }) {
   try {
     await db().insert(t.notifications).values({
@@ -89,7 +96,9 @@ export async function notify(opts: {
       kind: opts.kind,
       title: opts.title,
       body: opts.body ?? null,
-      href: opts.href ?? null
+      href: opts.href ?? null,
+      userId: opts.userId ?? null,
+      excludeUserId: opts.exceptUserId ?? null
     } as any);
   } catch {
     // swallow — the feed is not worth failing a real operation over

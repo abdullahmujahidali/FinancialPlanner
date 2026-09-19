@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Archivo, Inter } from "next/font/google";
 import "./globals.css";
 import SWRegister from "@/components/SWRegister";
+import RouteProgress from "@/components/RouteProgress";
+import { Suspense } from "react";
 
 // Archivo carries the oversized figures; Inter handles everything small.
 const sans = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-sans" });
@@ -33,6 +35,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${sans.variable} ${display.variable}`}>
       <body className="font-sans">
         <SWRegister />
+        {/* useSearchParams needs a boundary; the bar itself renders nothing until a nav starts. */}
+        <Suspense fallback={null}>
+          <RouteProgress />
+        </Suspense>
         {children}
       </body>
     </html>

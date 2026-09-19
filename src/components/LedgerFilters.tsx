@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
 
 type Named = { id: number; name: string };
 
@@ -52,6 +52,19 @@ export default function LedgerFilters({
   const flag = params.get("flag") || "";
 
   const anyActive = Boolean(q || cat || person || acct || type || flag);
+
+  /**
+   * How many of the *collapsed* controls are doing something. Search is excluded
+   * — it stays visible, so counting it would label a filter the user can see.
+   */
+  const activeCount = [cat, person, acct, type, flag].filter(Boolean).length;
+
+  /**
+   * On a phone the three selects and six chips are a full screen of furniture in
+   * front of a list whose job is scanning money, so they start folded away. From
+   * `sm:` up the panel is always shown by CSS and this flag stops mattering.
+   */
+  const [open, setOpen] = useState(false);
 
   /**
    * The text input is uncontrolled-ish: it holds its own value so typing never
@@ -105,8 +118,8 @@ export default function LedgerFilters({
 
   return (
     <section className="mb-4 overflow-hidden rounded-[22px] bg-card">
-      {/* Search row */}
-      <div className="flex items-center gap-3 px-5 py-4 lg:px-6">
+      {/* Search row — the only thing guaranteed to be on screen on a phone */}
+      <div className="flex items-center gap-2 px-5 py-3 sm:gap-3 sm:py-4 lg:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-2.5 rounded-full bg-page px-4 py-2.5">
           <Search size={17} strokeWidth={2.2} className="shrink-0 text-muted" />
           <input
@@ -129,16 +142,49 @@ export default function LedgerFilters({
           )}
         </div>
 
+        {/* Phone-only disclosure for everything below. Hidden from `sm:` up,
+            where the panel is always open and a toggle would be a dead control. */}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls="ledger-filter-panel"
+          className={
+            "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold transition sm:hidden " +
+            (activeCount > 0 ? "bg-ink text-white" : "bg-page text-ink hover:bg-line")
+          }
+        >
+          <SlidersHorizontal size={15} strokeWidth={2.2} />
+          Filters
+          {activeCount > 0 && <span className="num">· {activeCount}</span>}
+          <ChevronDown
+            size={14}
+            strokeWidth={2.4}
+            className={"transition " + (open ? "rotate-180" : "")}
+          />
+        </button>
+
+        {/* Three controls plus a search box is a squeeze at 390px, so on a
+            phone Clear moves inside the panel (below) and only the toggle,
+            which already carries the active count, stays in the bar. */}
         {anyActive && (
-          <button type="button" onClick={clear} className="btn-quiet btn-sm shrink-0">
-            Clear
-          </button>
+          <span className="hidden shrink-0 sm:block">
+            <button type="button" onClick={clear} className="btn-quiet btn-sm">
+              Clear
+            </button>
+          </span>
         )}
       </div>
 
-      {/* Filter row */}
-      <div className="rule-row" />
-      <div className="flex flex-col gap-3 px-5 py-4 lg:px-6">
+      {/* Filter panel — collapsed by default on phones, always open from sm: up. */}
+      <div className={(open ? "" : "hidden ") + "rule-row sm:block"} />
+      <div
+        id="ledger-filter-panel"
+        className={
+          (open ? "flex " : "hidden ") +
+          "flex-col gap-3 px-5 py-4 sm:flex lg:px-6"
+        }
+      >
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
           <select
             className="field"
@@ -204,6 +250,14 @@ export default function LedgerFilters({
             </button>
           ))}
         </div>
+
+        {anyActive && (
+          <div className="sm:hidden">
+            <button type="button" onClick={clear} className="btn-quiet btn-sm w-full">
+              Clear all filters
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );

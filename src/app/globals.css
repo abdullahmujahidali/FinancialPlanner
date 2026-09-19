@@ -119,6 +119,12 @@
   }
 }
 
+/* Indeterminate top bar shown while a navigation or server action is in flight. */
+@keyframes routebar {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
 :where(a, button, input, select, textarea):focus-visible {
   @apply outline-none ring-2 ring-ink/25 ring-offset-2 ring-offset-page;
 }
