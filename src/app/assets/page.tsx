@@ -38,74 +38,73 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
       action={<span className="money text-[22px] font-bold lg:text-[26px]">{pkr(netWorth, { compact: true })}</span>}
     >
       {sp.e && (
-        <p className="mb-4 border-2 border-line bg-blush px-4 py-3 text-[14px] font-bold text-ink">{sp.e}</p>
+        <p className="mb-5 rounded-[14px] bg-blush px-4 py-3 text-sm font-bold text-ink">{sp.e}</p>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
-        {/* ── Net worth block ──────────────────────────────────────────── */}
-        <section className="lg:col-span-12">
-          <div className="border-2 border-line bg-ink px-5 py-5 text-card lg:px-7 lg:py-6">
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="eyebrow text-card/55">Net worth · {active.length} active</span>
-              <span className="num text-[12px] font-bold text-card/55">{assets.length} total</span>
-            </div>
-            <div className="money-xl mt-3 text-[44px] text-acid lg:text-[64px]">{pkr(netWorth, { compact: true })}</div>
-          </div>
-        </section>
+      {/* ── Net worth zone ───────────────────────────────────────────────── */}
+      <section className="zone-ink mb-5">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="eyebrow text-white/45">Net worth · {active.length} active</span>
+          <span className="num text-[12px] font-bold text-white/45">{assets.length} total</span>
+        </div>
+        <div className="money-xl mt-4 text-[48px] text-acid lg:text-[68px]">{pkr(netWorth, { compact: true })}</div>
+      </section>
 
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
         {/* ── Asset cards ──────────────────────────────────────────────── */}
-        <section className="lg:col-span-7">
-          <h2 className="eyebrow mb-2.5">Holdings</h2>
+        <div className="flex flex-col gap-5 lg:w-[57%] lg:shrink-0">
+          <h2 className="eyebrow text-muted">Holdings</h2>
           {assets.length === 0 ? (
-            <div className="block-card p-5 text-sm font-semibold text-muted">
+            <div className="zone-card text-[15px] font-semibold text-muted">
               No assets yet — add the first one below.
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="flex flex-col gap-4">
               {assets.map((a) => {
                 const v = values.get(a.id)!;
                 const delta = v.latest - Number(a.purchasePrice);
                 return (
-                  <div key={a.id} className={"border-2 border-line bg-card " + (a.status === "sold" ? "opacity-60" : "")}>
-                    <div className="flex items-start justify-between gap-3 p-4">
-                      <div className="flex min-w-0 items-center gap-3">
+                  <div key={a.id}
+                    className={"overflow-hidden rounded-[22px] bg-card " + (a.status === "sold" ? "opacity-60" : "")}>
+                    <div className="flex items-start justify-between gap-4 p-6 lg:p-7">
+                      <div className="flex min-w-0 items-center gap-4">
                         {photoByAsset.has(a.id) && (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={`/api/attachment/${photoByAsset.get(a.id)}`} alt=""
-                            className="h-12 w-12 shrink-0 border-2 border-line object-cover" />
+                            className="h-14 w-14 shrink-0 rounded-[14px] object-cover" />
                         )}
                         <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 text-[15px] font-bold">
+                          <div className="flex flex-wrap items-center gap-2 text-[16px] font-bold">
                             <span className="truncate">{a.name}</span>
-                            {a.status === "sold" && <span className="tag bg-paper text-ink">sold</span>}
+                            {a.status === "sold" && <span className="tag-muted">sold</span>}
                           </div>
-                          <div className="num mt-1 text-[12px] font-medium text-muted">
+                          <div className="num mt-1.5 text-[13px] font-medium text-muted">
                             Bought {a.purchaseDate.slice(0, 4)} for {pkr(Number(a.purchasePrice), { compact: true })}
                           </div>
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <div className="money text-[18px] font-bold">{pkr(v.latest, { compact: true })}</div>
-                        <div className={"num text-[12px] font-bold " + (delta >= 0 ? "text-good" : "text-over")}>
+                        <div className="money text-[20px] font-bold">{pkr(v.latest, { compact: true })}</div>
+                        <div className={"num mt-1 text-[13px] font-bold " + (delta >= 0 ? "text-good" : "text-over")}>
                           {delta >= 0 ? "+" : ""}{pkr(delta, { compact: true })}
                         </div>
                       </div>
                     </div>
                     {a.status === "active" && (
-                      <div className="grid grid-cols-1 gap-2 border-t-2 border-line bg-paper p-3 sm:grid-cols-2">
-                        <form action={revalueAsset} className="flex gap-2">
+                      <div className="grid grid-cols-1 gap-3 bg-page p-6 sm:grid-cols-2 lg:px-7">
+                        <form action={revalueAsset} className="flex gap-2.5">
                           <input type="hidden" name="assetId" value={a.id} />
                           <input type="hidden" name="valuedOn" value={todayStr()} />
                           <input name="value" type="number" inputMode="numeric" placeholder="New value"
-                            className="field num min-w-0 px-2.5 py-2 text-sm" />
-                          <button className="btn btn-sm btn-quiet shrink-0">Revalue</button>
+                            className="field num min-w-0" />
+                          <button className="btn-quiet btn-sm shrink-0">Revalue</button>
                         </form>
-                        <form action={sellAsset} className="flex gap-2">
+                        <form action={sellAsset} className="flex gap-2.5">
                           <input type="hidden" name="assetId" value={a.id} />
                           <input type="hidden" name="soldDate" value={todayStr()} />
                           <input name="soldPrice" type="number" inputMode="numeric" placeholder="Sold for"
-                            className="field num min-w-0 px-2.5 py-2 text-sm" />
-                          <button className="btn btn-sm btn-quiet shrink-0">Sold</button>
+                            className="field num min-w-0" />
+                          <button className="btn-quiet btn-sm shrink-0">Sold</button>
                         </form>
                       </div>
                     )}
@@ -114,17 +113,17 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
               })}
             </div>
           )}
-        </section>
+        </div>
 
         {/* ── Right column: by year + add form ─────────────────────────── */}
-        <div className="space-y-4 lg:col-span-5">
+        <div className="flex flex-col gap-5 lg:min-w-0 lg:flex-1">
           {byYear.size > 0 && (
-            <section>
-              <div className="block-card">
-                <h2 className="eyebrow border-b-2 border-line px-4 py-3 lg:px-5">Bought by year</h2>
+            <section className="overflow-hidden rounded-[22px] bg-card">
+              <h2 className="eyebrow px-6 pb-2 pt-6 lg:px-8">Bought by year</h2>
+              <div className="px-6 pb-4 lg:px-8">
                 {[...byYear.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([year, list], i, arr) => (
                   <div key={year}
-                    className={"flex items-start justify-between gap-3 px-4 py-3 text-[15px] lg:px-5 " + (i < arr.length - 1 ? "rule-row" : "")}>
+                    className={"flex items-start justify-between gap-3 py-4 text-[15px] " + (i < arr.length - 1 ? "rule-row" : "")}>
                     <span className="min-w-0">
                       <span className="num font-bold">{year}</span>{" "}
                       <span className="text-[13px] font-medium text-muted">· {list.map(x => x.name).join(", ")}</span>
@@ -138,18 +137,18 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
             </section>
           )}
 
-          <section className="block-card">
-            <h2 className="eyebrow border-b-2 border-line bg-acid px-4 py-3 lg:px-5">Add an asset</h2>
-            <form action={addAsset} className="space-y-3 p-4 lg:p-5">
+          <section className="zone-acid">
+            <h2 className="eyebrow">Add an asset</h2>
+            <form action={addAsset} className="mt-6 space-y-4">
               <input name="name" placeholder="e.g. 10 marla plot, LDA City Ph-1 H-101" className="field" required />
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <input name="purchasePrice" type="number" inputMode="numeric" placeholder="Purchase price" className="field num" required />
                 <input name="purchaseDate" type="date" defaultValue={todayStr()} className="field" />
               </div>
               <input name="notes" placeholder="Notes (optional)" className="field" />
               <label className="block">
-                <span className="eyebrow text-muted">Photo / papers — up to 2 MB</span>
-                <input name="photo" type="file" accept="image/*,.pdf" className="field mt-1.5" />
+                <span className="eyebrow text-ink/55">Photo / papers — up to 2 MB</span>
+                <input name="photo" type="file" accept="image/*,.pdf" className="field mt-2 py-2.5" />
               </label>
               <button className="btn w-full">
                 <Plus size={17} strokeWidth={2.75} />

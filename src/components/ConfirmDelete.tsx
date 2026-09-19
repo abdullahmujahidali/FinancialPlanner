@@ -1,16 +1,15 @@
 "use client";
-import { useState } from "react";
-import { Modal } from "@heroui/react";
+import { Modal, useOverlayState } from "@heroui/react";
 import { Trash2 } from "lucide-react";
 
 /**
  * Delete confirmation for a ledger row.
  *
  * HeroUI supplies the accessible dialog (focus trap, escape, aria wiring);
- * every slot is restyled to the brutalist system — square corners, 2px ink
- * borders, hard offset shadow — since HeroUI's defaults are soft and rounded.
+ * the slots are restyled to this app's rounded system, since HeroUI's own
+ * defaults carry a different radius and shadow scale.
  *
- * The actual delete stays a server action: the form posts as it always did,
+ * The delete itself stays a server action: the form posts as it always did,
  * this only gates it behind a confirmation.
  */
 export default function ConfirmDelete({
@@ -22,43 +21,43 @@ export default function ConfirmDelete({
   label: string;
   action: (formData: FormData) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const state = useOverlayState();
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={state.open}
         aria-label={`Delete ${label}`}
-        className="flex h-8 w-8 items-center justify-center border-2 border-line bg-card text-ink transition-all hover:bg-blush hover:shadow-hardsm"
+        className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition hover:bg-blush hover:text-ink"
       >
-        <Trash2 size={14} strokeWidth={2.5} />
+        <Trash2 size={15} strokeWidth={2.2} />
       </button>
 
-      <Modal isOpen={open} onOpenChange={setOpen}>
-        <Modal.Backdrop className="bg-ink/60" />
-        <Modal.Container>
-          <Modal.Dialog className="w-full max-w-sm rounded-none border-2 border-line bg-card p-0 shadow-hardlg">
-            <Modal.Header className="border-b-2 border-line bg-blush px-5 py-3">
-              <Modal.Heading className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink">
-                Delete entry
-              </Modal.Heading>
+      <Modal state={state}>
+        <Modal.Backdrop className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-[2px]" />
+        {/* The container renders position:static by default, which drops the
+            dialog into normal flow at the bottom of a long page — pin it. */}
+        <Modal.Container className="fixed inset-0 z-50 !w-screen !max-w-none flex items-center justify-center p-4">
+          <Modal.Dialog className="w-full max-w-[400px] overflow-hidden rounded-[22px] bg-card p-0 shadow-soft">
+            <Modal.Header className="bg-blush px-6 py-4">
+              <Modal.Heading className="eyebrow text-ink">Delete entry</Modal.Heading>
             </Modal.Header>
 
-            <Modal.Body className="px-5 py-4">
-              <p className="text-[15px] font-semibold text-ink">{label}</p>
-              <p className="mt-1 text-sm text-muted">
+            <Modal.Body className="px-6 py-5">
+              <p className="text-[15px] font-bold text-ink">{label}</p>
+              <p className="mt-2 text-[14px] text-muted">
                 This removes the transaction permanently. It cannot be undone.
               </p>
             </Modal.Body>
 
-            <Modal.Footer className="flex gap-2 border-t-2 border-line px-5 py-4">
-              <button type="button" onClick={() => setOpen(false)} className="btn-quiet btn-sm flex-1">
+            <Modal.Footer className="flex gap-3 px-6 pb-6">
+              <button type="button" onClick={state.close} className="btn-quiet flex-1">
                 Cancel
               </button>
               <form action={action} className="flex-1">
                 <input type="hidden" name="id" value={id} />
-                <button className="btn btn-sm w-full bg-blush">Delete</button>
+                <button className="btn w-full">Delete</button>
               </form>
             </Modal.Footer>
           </Modal.Dialog>

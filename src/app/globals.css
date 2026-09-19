@@ -1,118 +1,120 @@
 @import "tailwindcss";
 /* HeroUI v3 supplies the interactive widgets (modal, select, date picker).
-   Its defaults are soft/rounded, so every use restyles the relevant slots
-   via `classNames` to match the brutalist system below. */
+   Slots are restyled per-use to match the system below. */
 @import "@heroui/react/styles";
 
-/* Tailwind 4 is CSS-first: the design tokens that used to live in
-   tailwind.config.ts are declared here and generate the same utilities
-   (bg-acid, border-line, shadow-hard, font-display, …). */
+/**
+ * Hearthbook design system.
+ *
+ * Bold editorial fintech: full-bleed colour zones (lime / white / black /
+ * blush) with generously rounded geometry. Sections separate by COLOUR, not by
+ * borders — there are almost no visible rules in this UI. Hierarchy comes from
+ * scale and zone, so each block gets real padding and one clear focal number.
+ */
 @theme {
   --color-acid: #E2FB4F;
-  --color-aciddim: #C9E23F;
-  --color-ink: #0A0A0A;
-  --color-ink2: #161616;
-  --color-paper: #F2F2F0;
+  --color-aciddim: #D3ED3E;
+  --color-ink: #0E0E0E;
+  --color-ink2: #1C1C1C;
+  --color-page: #F0F0EE;
   --color-card: #FFFFFF;
-  --color-line: #0A0A0A;
-  --color-muted: #6B6B6B;
   --color-blush: #E98D7C;
-  --color-blushdim: #D97A68;
+  --color-blushdim: #DE7C6A;
+  --color-muted: #7C7C78;
+  --color-line: #E7E7E3;
   --color-good: #1F7A4D;
   --color-over: #C43C22;
 
   --font-display: var(--font-display), system-ui, sans-serif;
   --font-sans: var(--font-sans), system-ui, sans-serif;
 
-  /* Hard offset shadows — the brutalist "lift". No blur. */
-  --shadow-hard: 4px 4px 0 0 #0A0A0A;
-  --shadow-hardsm: 2px 2px 0 0 #0A0A0A;
-  --shadow-hardlg: 6px 6px 0 0 #0A0A0A;
+  /* Generous, consistent radii — the single biggest "polish" lever. */
+  --radius-zone: 22px;
+  --radius-card: 18px;
+  --radius-control: 12px;
+
+  --shadow-soft: 0 1px 2px rgb(14 14 14 / 0.04), 0 8px 24px rgb(14 14 14 / 0.06);
 }
 
-/* Tailwind 4 resets borders to currentColor; this app assumes the ink rule. */
 @layer base {
-  *, ::after, ::before { border-color: var(--color-line); }
   :root { color-scheme: light; }
-  html { background: #F2F2F0; }
-  body { @apply bg-paper text-ink antialiased; }
+  html { background: var(--color-page); }
+  body { @apply bg-page text-ink antialiased; }
+  h1, h2, h3 { @apply font-display tracking-[-0.025em]; }
 }
 
 @layer components {
-  /* Numerals: tabular everywhere so columns line up; tight tracking for the big ones. */
+  /* Numerals: tabular so columns align. */
   .num { font-variant-numeric: tabular-nums; }
   .money {
-    @apply font-display tracking-[-0.03em];
+    @apply font-display tracking-[-0.025em];
     font-variant-numeric: tabular-nums;
   }
-  /* The hero figure — oversized, tight, unapologetic. */
+  /* The hero figure — oversized and tightly tracked, as in the reference. */
   .money-xl {
-    @apply font-display font-bold leading-[0.88] tracking-[-0.045em];
+    @apply font-display font-extrabold leading-[0.9] tracking-[-0.045em];
     font-variant-numeric: tabular-nums;
   }
 
-  /* --- Blocks ----------------------------------------------------------- */
-  /* Flat panel with a hard black rule. The base unit of the whole UI. */
-  .block-card { @apply border-2 border-line bg-card; }
-  .block-lift { @apply border-2 border-line bg-card; box-shadow: 4px 4px 0 0 #0A0A0A; }
+  /* --- Zones ------------------------------------------------------------ */
+  /* A full-bleed block of colour. No border: the fill does the separating. */
+  .zone { @apply rounded-[22px] p-6 lg:p-8; }
+  .zone-acid { @apply rounded-[22px] bg-acid p-6 text-ink lg:p-8; }
+  .zone-ink { @apply rounded-[22px] bg-ink p-6 text-white lg:p-8; }
+  .zone-blush { @apply rounded-[22px] bg-blush p-6 text-ink lg:p-8; }
+  .zone-card { @apply rounded-[22px] bg-card p-6 text-ink lg:p-8; }
+
+  /* Plain white surface for lists; still borderless, rows divide by hairline. */
+  .card { @apply rounded-[18px] bg-card; }
+
+  /* Section label: quiet and spaced, never competing with the figure. */
+  .eyebrow { @apply text-[11px] font-bold uppercase tracking-[0.1em]; }
 
   /* --- Controls --------------------------------------------------------- */
   .field {
-    @apply border-2 border-line bg-card px-3.5 py-3 text-[15px] outline-none
-           transition-shadow placeholder:text-muted;
+    @apply rounded-[12px] border border-line bg-card px-4 py-3 text-[15px]
+           text-ink outline-none transition placeholder:text-muted;
     width: 100%;
-    min-width: 0;      /* let flex shrink it instead of overflowing the card */
+    min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
   }
-  .field:focus { box-shadow: 2px 2px 0 0 #0A0A0A; }
+  .field:focus {
+    @apply border-ink;
+    box-shadow: 0 0 0 3px rgb(14 14 14 / 0.08);
+  }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 border-2 border-line bg-acid px-5 py-3
-           text-[15px] font-bold text-ink transition-all
-           active:translate-x-[2px] active:translate-y-[2px];
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-ink px-5 py-3
+           text-[14px] font-bold text-white transition hover:bg-ink2 active:scale-[0.98];
   }
-  .btn:hover { box-shadow: 4px 4px 0 0 #0A0A0A; }
-  .btn:active { box-shadow: none; }
-  .btn-dark {
-    @apply inline-flex items-center justify-center gap-2 border-2 border-line bg-ink px-5 py-3
-           text-[15px] font-bold text-acid transition-all
-           active:translate-x-[2px] active:translate-y-[2px];
+  .btn-acid {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-acid px-5 py-3
+           text-[14px] font-bold text-ink transition hover:bg-aciddim active:scale-[0.98];
   }
-  .btn-dark:hover { box-shadow: 4px 4px 0 0 #0A0A0A; }
-  .btn-dark:active { box-shadow: none; }
   .btn-quiet {
-    @apply inline-flex items-center justify-center gap-2 border-2 border-line bg-card px-5 py-3
-           text-[15px] font-bold text-ink transition-all
-           active:translate-x-[2px] active:translate-y-[2px];
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-line
+           bg-card px-5 py-3 text-[14px] font-bold text-ink transition
+           hover:bg-page active:scale-[0.98];
   }
-  .btn-quiet:hover { box-shadow: 4px 4px 0 0 #0A0A0A; }
-  .btn-quiet:active { box-shadow: none; }
-  .btn-sm { @apply px-3.5 py-2 text-sm; }
+  .btn-sm { @apply px-3.5 py-2 text-[13px]; }
 
-  .chip { @apply border-2 border-line bg-card px-3 py-1.5 text-sm font-medium; }
-  .chip-on { @apply border-2 border-line bg-ink px-3 py-1.5 text-sm font-medium text-acid; }
+  .chip { @apply rounded-full bg-page px-3 py-1.5 text-[13px] font-semibold text-ink; }
+  .tag { @apply rounded-full px-2.5 py-1 text-[11px] font-bold; }
+  .tag-acid { @apply rounded-full bg-acid px-2.5 py-1 text-[11px] font-bold text-ink; }
+  .tag-blush { @apply rounded-full bg-blush px-2.5 py-1 text-[11px] font-bold text-ink; }
+  .tag-muted { @apply rounded-full bg-page px-2.5 py-1 text-[11px] font-bold text-muted; }
 
-  /* Segmented toggle (Week / Month), mirroring the reference's pill group. */
-  .seg { @apply inline-flex border-2 border-line bg-card p-0.5; }
-  .seg-item { @apply px-4 py-1.5 text-sm font-semibold text-ink transition-colors; }
-  .seg-item-on { @apply bg-ink text-acid; }
+  .rule-row { @apply border-b border-line; }
 
-  .tag { @apply border-2 border-line px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide; }
-  .rule-row { @apply border-b-2 border-line; }
-
-  /* Label above a figure: small, spaced, quiet. */
-  .eyebrow { @apply text-[11px] font-bold uppercase tracking-[0.12em]; }
-
-  /* Diagonal hatch — the reference uses it for the "current"/over-budget bar. */
+  /* Diagonal hatch — the reference's "current"/over-budget bar treatment. */
   .hatch {
     background-image: repeating-linear-gradient(
-      45deg, #0A0A0A 0 6px, transparent 6px 12px
+      45deg, #0E0E0E 0 7px, transparent 7px 14px
     );
   }
 }
 
-/* Keep focus visible against flat blocks without a glow. */
 :where(a, button, input, select, textarea):focus-visible {
-  @apply outline-none ring-2 ring-ink ring-offset-2 ring-offset-paper;
+  @apply outline-none ring-2 ring-ink/25 ring-offset-2 ring-offset-page;
 }
