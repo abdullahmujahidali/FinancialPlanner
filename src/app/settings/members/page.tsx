@@ -67,7 +67,7 @@ export default async function MembersSettings({
         )}
 
         {role === "owner" ? (
-          <form action={addMember} className="bg-page p-5 lg:p-6">
+          <form action={addMember} className="border-t border-line bg-card p-5 lg:p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <input name="name" placeholder="Name" className="field min-w-0 flex-1" />
               <input
@@ -95,7 +95,7 @@ export default async function MembersSettings({
             </p>
           </form>
         ) : (
-          <div className="bg-page p-5 text-[13px] text-muted lg:p-6">
+          <div className="border-t border-line bg-card p-5 text-[13px] text-muted lg:p-6">
             Only the household owner can invite new members or remove existing ones.
           </div>
         )}

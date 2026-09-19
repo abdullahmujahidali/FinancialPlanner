@@ -86,7 +86,7 @@ export default async function RulesSettings() {
           </ul>
         )}
 
-        <div className="bg-page p-5 text-[13px] text-muted lg:p-6">
+        <div className="border-t border-line bg-card p-5 text-[13px] text-muted lg:p-6">
           There is no add form here on purpose. Rules are learned: when you categorise a
           transaction in the{" "}
           <Link href="/review" className="font-bold text-ink underline underline-offset-2">
