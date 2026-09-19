@@ -10,7 +10,7 @@ export default async function LoginPage({ searchParams }: { searchParams: { e?: 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6 py-10">
       <div className="mb-8">
-        <div className="mb-2 inline-block rounded bg-brand px-2.5 py-1 text-lg font-semibold text-white">Khata</div>
+        <div className="mb-2 inline-block rounded bg-brand px-2.5 py-1 text-lg font-semibold text-white">Hearthbook</div>
         <p className="text-muted">The family ledger. Expenses, assets, goals — one book.</p>
       </div>
       {searchParams.e && <p className="mb-4 rounded bg-oversoft px-3 py-2 text-sm text-over">{searchParams.e}</p>}

@@ -1,4 +1,4 @@
-const CACHE = "khata-v1";
+const CACHE = "hearthbook-v1";
 const SHELL = ["/manifest.webmanifest", "/icons/icon-192.png"];
 
 self.addEventListener("install", (e) => {

@@ -1,4 +1,4 @@
-# Khata — the family ledger
+# Hearthbook — the family ledger
 
 Multi-tenant household finance PWA. Expenses with pass-through / one-off flags, optional
 per-person tagging, bank-CSV import with a self-learning rules engine, assets with value
@@ -28,7 +28,7 @@ Stack: Next.js 14 (app router, server actions) · Drizzle ORM · Neon Postgres �
 ## Deploy (Vercel)
 
 Push to GitHub → import in Vercel → set `DATABASE_URL` + `SESSION_SECRET` env vars → deploy.
-Open the URL on your phone → Add to Home Screen → it installs as the Khata app.
+Open the URL on your phone → Add to Home Screen → it installs as the Hearthbook app.
 
 ## How the ledger thinks
 
