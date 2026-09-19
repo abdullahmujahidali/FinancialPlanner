@@ -158,7 +158,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
           <section className="zone-acid">
             <h2 className="eyebrow">Add an asset</h2>
             <form action={addAsset} className="mt-6 space-y-4">
-              <input name="name" placeholder="e.g. 10 marla plot, LDA City Ph-1 H-101" className="field" required />
+              <input name="name" placeholder="e.g. Car, house, or gold" className="field" required />
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <input name="purchasePrice" type="number" inputMode="numeric" placeholder="Purchase price" className="field num" required />
                 <input name="purchaseDate" type="date" defaultValue={todayStr()} className="field" />

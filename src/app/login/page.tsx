@@ -72,7 +72,7 @@ export default async function LoginPage({
             {signupMode && (
               <input
                 name="household"
-                placeholder="Household name (e.g. Mujahid family)"
+                placeholder="Household name"
                 className="field"
               />
             )}

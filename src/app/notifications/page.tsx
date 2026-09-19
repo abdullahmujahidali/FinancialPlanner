@@ -3,7 +3,7 @@ import Shell from "@/components/Shell";
 import EmptyState from "@/components/EmptyState";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, or } from "drizzle-orm";
 import { markAllRead, markRead, markUnread, dismiss, clearAll } from "@/actions/notifications";
 import { Bell, Upload, Inbox, Wallet, Target, Building2, Check, Dot, X, CheckCheck, Trash2 } from "lucide-react";
 
@@ -39,13 +39,17 @@ export default async function NotificationsPage({
   searchParams: Promise<{ filter?: string }>;
 }) {
   const sp = await searchParams;
-  const { household } = await requireContext();
+  const { household, user } = await requireContext();
   const filter = sp.filter === "unread" ? "unread" : "all";
 
-  const where =
-    filter === "unread"
-      ? and(eq(t.notifications.householdId, household.id), isNull(t.notifications.readAt))
-      : eq(t.notifications.householdId, household.id);
+  // Mirror the bell: only what is addressed to me (or nobody), and never my
+  // own action reported back at me.
+  const forMe = and(
+    eq(t.notifications.householdId, household.id),
+    or(isNull(t.notifications.userId), eq(t.notifications.userId, user.id)),
+    or(isNull(t.notifications.excludeUserId), ne(t.notifications.excludeUserId, user.id))
+  );
+  const where = filter === "unread" ? and(forMe, isNull(t.notifications.readAt)) : forMe;
 
   const notes = await db()
     .select()

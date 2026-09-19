@@ -105,7 +105,7 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
           <section className="zone-acid lg:sticky lg:top-8">
             <h2 className="eyebrow">New goal</h2>
             <form action={addGoal} className="mt-6 space-y-4">
-              <input name="name" placeholder="e.g. Family car" className="field" required />
+              <input name="name" placeholder="e.g. New car, emergency fund" className="field" required />
               <div className="grid grid-cols-2 gap-3">
                 <input name="targetAmount" type="number" inputMode="numeric" placeholder="Target (PKR)"
                   className="field num" required />

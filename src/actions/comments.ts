@@ -75,14 +75,16 @@ export async function addComment(formData: FormData) {
   const href = hrefFor(entityType, entityId);
 
   if (mentioned.length > 0) {
-    // One row per mention — the feed is household-wide, but the title names them.
+    // One row per mention, addressed to that person only.
     for (const m of mentioned) {
       await notify({
         householdId: household.id,
         kind: "review",
         title: `${user.name} mentioned you`,
         body: preview,
-        href
+        href,
+        userId: m.id,
+        exceptUserId: user.id
       });
     }
   } else {
@@ -91,7 +93,8 @@ export async function addComment(formData: FormData) {
       kind: "review",
       title: `${user.name} commented`,
       body: preview,
-      href
+      href,
+      exceptUserId: user.id
     });
   }
 

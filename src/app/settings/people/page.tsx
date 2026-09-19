@@ -54,7 +54,7 @@ export default async function PeopleSettings() {
         <form action={addPerson} className="flex items-center gap-3 border-t border-line bg-card p-5 lg:p-6">
           <input
             name="name"
-            placeholder="e.g. Miral"
+            placeholder="e.g. a family member"
             className="field min-w-0 flex-1"
             required
           />
