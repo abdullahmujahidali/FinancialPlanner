@@ -45,8 +45,10 @@ export default function Sidebar({ household, reviewCount = 0 }: { household: str
   return (
     <aside className="fixed inset-y-0 left-0 z-20 hidden w-[248px] flex-col border-r-2 border-line bg-paper px-4 py-6 lg:flex">
       <Link href="/" className="mb-8 block">
-        <span className="block border-2 border-line bg-ink px-3 py-2 font-display text-[19px] font-extrabold tracking-tight text-acid">
-          Hearthbook
+        <span className="flex items-center gap-2.5 border-2 border-line bg-ink py-2 pl-2 pr-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/logo.svg" alt="" width={30} height={30} className="shrink-0" />
+          <span className="font-display text-[19px] font-extrabold tracking-tight text-acid">Hearthbook</span>
         </span>
         <span className="mt-2 block truncate text-[12px] font-semibold text-muted">{household}</span>
       </Link>

@@ -11,7 +11,15 @@ export const metadata: Metadata = {
   title: "Hearthbook",
   description: "The family ledger — expenses, assets, goals.",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "Hearthbook" }
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Hearthbook" },
+  icons: {
+    icon: [
+      { url: "/icons/logo.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-16.png", sizes: "16x16", type: "image/png" }
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }]
+  }
 };
 export const viewport: Viewport = {
   themeColor: "#E2FB4F",
