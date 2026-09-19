@@ -11,9 +11,10 @@ import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function Dashboard({ searchParams }: { searchParams: { m?: string } }) {
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ m?: string }> }) {
+  const sp = await searchParams;
   const { household } = await requireContext();
-  const m = searchParams.m || monthKey();
+  const m = sp.m || monthKey();
   const { from, next } = monthRange(m);
   const H = eq(t.transactions.householdId, household.id);
   const inMonth = and(H, gte(t.transactions.txDate, from), lt(t.transactions.txDate, next));

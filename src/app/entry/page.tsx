@@ -7,7 +7,8 @@ import { todayStr } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
-export default async function EntryPage({ searchParams }: { searchParams: { ok?: string; e?: string } }) {
+export default async function EntryPage({ searchParams }: { searchParams: Promise<{ ok?: string; e?: string }> }) {
+  const sp = await searchParams;
   const { household } = await requireContext();
   const [accounts, categories, persons] = await Promise.all([
     db().select().from(t.accounts).where(and(eq(t.accounts.householdId, household.id), eq(t.accounts.isArchived, false))).orderBy(asc(t.accounts.id)),
@@ -17,11 +18,11 @@ export default async function EntryPage({ searchParams }: { searchParams: { ok?:
 
   return (
     <Shell title="Add entry">
-      {searchParams.ok && (
+      {sp.ok && (
         <p className="mb-4 border-2 border-line bg-acid px-3 py-2.5 text-sm font-bold">Saved.</p>
       )}
-      {searchParams.e && (
-        <p className="mb-4 border-2 border-line bg-blush px-3 py-2.5 text-sm font-bold">{searchParams.e}</p>
+      {sp.e && (
+        <p className="mb-4 border-2 border-line bg-blush px-3 py-2.5 text-sm font-bold">{sp.e}</p>
       )}
 
       <form action={addTransaction} className="space-y-5">

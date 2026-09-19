@@ -8,7 +8,8 @@ import { Plus, Check, Target } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function GoalsPage({ searchParams }: { searchParams: { e?: string } }) {
+export default async function GoalsPage({ searchParams }: { searchParams: Promise<{ e?: string }> }) {
+  const sp = await searchParams;
   const { household } = await requireContext();
   const goals = await db().select().from(t.goals)
     .where(eq(t.goals.householdId, household.id)).orderBy(desc(t.goals.id));
@@ -21,8 +22,8 @@ export default async function GoalsPage({ searchParams }: { searchParams: { e?: 
 
   return (
     <Shell wide title="Goals">
-      {searchParams.e && (
-        <p className="mb-4 border-2 border-line bg-blush px-3 py-2.5 text-sm font-bold">{searchParams.e}</p>
+      {sp.e && (
+        <p className="mb-4 border-2 border-line bg-blush px-3 py-2.5 text-sm font-bold">{sp.e}</p>
       )}
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">

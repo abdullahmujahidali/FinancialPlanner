@@ -5,10 +5,11 @@ import { requireContext } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { household } = await requireContext();
   const rows = await db().select().from(t.attachments)
-    .where(and(eq(t.attachments.householdId, household.id), eq(t.attachments.id, Number(params.id)))).limit(1);
+    .where(and(eq(t.attachments.householdId, household.id), eq(t.attachments.id, Number(id)))).limit(1);
   if (!rows.length) return new NextResponse("Not found", { status: 404 });
   const a = rows[0];
   return new NextResponse(Buffer.from(a.data, "base64"), {
