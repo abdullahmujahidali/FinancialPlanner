@@ -262,7 +262,7 @@ export default async function YearOverview({
               <div className="bg-card px-6 pb-8 pt-6 lg:px-8">
                 <h2 className="eyebrow">Where it went</h2>
                 <div className="mt-5">
-                  <Donut data={catData} total={spend} label={`Spent in ${year}`} />
+                  <Donut data={catData} total={spend} label={`Spent in ${year}`} currency={household.currency} />
                 </div>
               </div>
 

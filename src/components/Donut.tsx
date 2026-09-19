@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { pkr } from "@/lib/money";
+import { pkr, setCurrency } from "@/lib/money";
 import { DONUT_COLORS } from "@/lib/palette";
 
 /**
@@ -16,12 +16,21 @@ import { DONUT_COLORS } from "@/lib/palette";
 export default function Donut({
   data,
   total,
-  label = "Total"
+  label = "Total",
+  currency
 }: {
   data: Array<{ name: string; value: number }>;
   total: number;
   label?: string;
+  /**
+   * The household's currency. `setCurrency` is module-level state set on the
+   * server during the request; this component is a client one, so its own
+   * bundle would otherwise keep the PKR default and print "Rs" for every
+   * household. Passing the code in re-points the formatter on the client too.
+   */
+  currency?: string | null;
 }) {
+  setCurrency(currency);
   const [active, setActive] = useState<number | null>(null);
 
   const sum = data.reduce((a, d) => a + d.value, 0);

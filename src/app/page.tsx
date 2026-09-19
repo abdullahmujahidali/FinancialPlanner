@@ -284,7 +284,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               <div className="bg-card px-6 pb-8 pt-6 lg:px-8">
                 <h2 className="eyebrow">Where it went</h2>
                 <div className="mt-5">
-                  <Donut data={catData} total={spend} label="Total spent" />
+                  <Donut data={catData} total={spend} label="Total spent" currency={household.currency} />
                 </div>
               </div>
 
