@@ -52,7 +52,7 @@ export default async function CategoriesSettings() {
           </ul>
         )}
 
-        <form action={addCategory} className="bg-page p-5 lg:p-6">
+        <form action={addCategory} className="border-t border-line bg-card p-5 lg:p-6">
           <div className="flex items-center gap-3">
             <input
               name="name"

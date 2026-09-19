@@ -51,7 +51,7 @@ export default async function PeopleSettings() {
           </ul>
         )}
 
-        <form action={addPerson} className="flex items-center gap-3 bg-page p-5 lg:p-6">
+        <form action={addPerson} className="flex items-center gap-3 border-t border-line bg-card p-5 lg:p-6">
           <input
             name="name"
             placeholder="e.g. Miral"

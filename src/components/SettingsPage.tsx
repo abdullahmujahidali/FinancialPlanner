@@ -41,10 +41,14 @@ export default async function SettingsPage({
       }
       title={title}
     >
-      {description && (
-        <p className="-mt-2 mb-6 max-w-[68ch] text-[15px] leading-relaxed text-muted">{description}</p>
-      )}
-      {children}
+      {/* A settings topic is a single list or form — capped so rows don't
+          stretch to 1500px with the value miles from its label. */}
+      <div className="max-w-[860px]">
+        {description && (
+          <p className="-mt-2 mb-6 text-[15px] leading-relaxed text-muted">{description}</p>
+        )}
+        {children}
+      </div>
     </Shell>
   );
 }
