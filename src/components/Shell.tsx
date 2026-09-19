@@ -14,11 +14,14 @@ import { logout } from "@/actions/auth";
  */
 export default async function Shell({
   title,
+  titleSlot,
   action,
   wide = false,
   children
 }: {
   title: string;
+  /** Replaces the default <h1>, for pages that need a back button beside it. */
+  titleSlot?: React.ReactNode;
   action?: React.ReactNode;
   wide?: boolean;
   children: React.ReactNode;
@@ -39,9 +42,11 @@ export default async function Shell({
         }
       >
         <header className="mb-6 flex items-center justify-between gap-3 lg:mb-8">
-          <h1 className="min-w-0 truncate font-display text-[26px] font-extrabold tracking-[-0.03em] lg:text-[34px]">
-            {title}
-          </h1>
+          {titleSlot ?? (
+            <h1 className="min-w-0 truncate font-display text-[26px] font-extrabold tracking-[-0.03em] lg:text-[34px]">
+              {title}
+            </h1>
+          )}
           {action}
         </header>
         {children}

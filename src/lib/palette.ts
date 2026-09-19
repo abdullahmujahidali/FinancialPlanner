@@ -7,8 +7,14 @@
 export const DONUT_COLORS = [
   "#E2FB4F", // 1st — acid lime, the dominant slice
   "#0E0E0E", // 2nd — ink
-  "#E98D7C", // 3rd — blush
-  "#7FB77E", // 4th — sage
-  "#F2C14E", // 5th — amber
-  "#6C8EBF"  // 6th+ — steel blue
+  "#3E7CB1", // 3rd — steel blue
+  "#F2C14E", // 4th — amber
+  "#7FB77E", // 5th — sage
+  "#9B6FC7"  // 6th+ — violet
 ];
+
+/**
+ * The donut sits on a white panel rather than a coloured one: blush segments
+ * were vanishing into the blush background, and no accent reads reliably
+ * against every other accent.
+ */

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db, t } from "@/db/client";
 import { eq } from "drizzle-orm";
+import { setCurrency } from "@/lib/money";
 
 const COOKIE = "hb_session";
 const secret = () => new TextEncoder().encode(process.env.SESSION_SECRET || "dev-secret-change-me");
@@ -47,5 +48,7 @@ export async function requireContext() {
     .where(eq(t.users.id, uid!))
     .limit(1);
   if (!rows.length) redirect("/login");
+  // Point the money formatters at this household before anything renders.
+  setCurrency(rows[0].household.currency);
   return { user: rows[0].user, household: rows[0].household, role: rows[0].membership.role };
 }
