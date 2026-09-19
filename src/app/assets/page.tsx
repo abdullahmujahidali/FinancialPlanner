@@ -4,7 +4,8 @@ import { db, t } from "@/db/client";
 import { asc, desc, eq } from "drizzle-orm";
 import { addAsset, revalueAsset, sellAsset } from "@/actions/portfolio";
 import { pkr, todayStr } from "@/lib/money";
-import { Plus } from "lucide-react";
+import { Plus, Building2 } from "lucide-react";
+import EmptyState from "@/components/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -55,9 +56,11 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
         <div className="flex flex-col gap-5 lg:w-[57%] lg:shrink-0">
           <h2 className="eyebrow text-muted">Holdings</h2>
           {assets.length === 0 ? (
-            <div className="zone-card text-[15px] font-semibold text-muted">
-              No assets yet — add the first one below.
-            </div>
+            <EmptyState
+              Icon={Building2}
+              title="No assets yet"
+              body="Assets are the things your household owns — property, vehicles, gold. The latest value of each active asset is what adds up to your net worth."
+            />
           ) : (
             <div className="flex flex-col gap-4">
               {assets.map((a) => {
