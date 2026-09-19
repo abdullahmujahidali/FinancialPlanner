@@ -8,7 +8,8 @@ import { Plus } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function AssetsPage({ searchParams }: { searchParams: { e?: string } }) {
+export default async function AssetsPage({ searchParams }: { searchParams: Promise<{ e?: string }> }) {
+  const sp = await searchParams;
   const { household } = await requireContext();
   const assets = await db().select().from(t.assets)
     .where(eq(t.assets.householdId, household.id)).orderBy(desc(t.assets.purchaseDate));
@@ -36,8 +37,8 @@ export default async function AssetsPage({ searchParams }: { searchParams: { e?:
       title="Assets"
       action={<span className="money text-[22px] font-bold lg:text-[26px]">{pkr(netWorth, { compact: true })}</span>}
     >
-      {searchParams.e && (
-        <p className="mb-4 border-2 border-line bg-blush px-4 py-3 text-[14px] font-bold text-ink">{searchParams.e}</p>
+      {sp.e && (
+        <p className="mb-4 border-2 border-line bg-blush px-4 py-3 text-[14px] font-bold text-ink">{sp.e}</p>
       )}
 
       <div className="grid gap-4 lg:grid-cols-12 lg:items-start">

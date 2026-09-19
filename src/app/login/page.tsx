@@ -4,9 +4,10 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default async function LoginPage({ searchParams }: { searchParams: { e?: string; mode?: string } }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ e?: string; mode?: string }> }) {
+  const sp = await searchParams;
   if (await currentUserId()) redirect("/");
-  const signupMode = searchParams.mode === "signup";
+  const signupMode = sp.mode === "signup";
   return (
     <main className="min-h-screen bg-acid">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-5 py-12">
@@ -24,8 +25,8 @@ export default async function LoginPage({ searchParams }: { searchParams: { e?: 
         <div className="border-2 border-line bg-card p-5 shadow-hardlg">
           <h2 className="eyebrow mb-4">{signupMode ? "Create household" : "Sign in"}</h2>
 
-          {searchParams.e && (
-            <p className="mb-4 border-2 border-line bg-blush px-3 py-2.5 text-sm font-bold">{searchParams.e}</p>
+          {sp.e && (
+            <p className="mb-4 border-2 border-line bg-blush px-3 py-2.5 text-sm font-bold">{sp.e}</p>
           )}
 
           <form action={signupMode ? signup : login} className="space-y-3">

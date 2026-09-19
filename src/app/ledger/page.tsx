@@ -5,13 +5,15 @@ import { db, t } from "@/db/client";
 import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { deleteTransaction } from "@/actions/ledger";
 import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
-import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import ConfirmDelete from "@/components/ConfirmDelete";
 
 export const dynamic = "force-dynamic";
 
-export default async function LedgerPage({ searchParams }: { searchParams: { m?: string } }) {
+export default async function LedgerPage({ searchParams }: { searchParams: Promise<{ m?: string }> }) {
+  const sp = await searchParams;
   const { household } = await requireContext();
-  const m = searchParams.m || monthKey();
+  const m = sp.m || monthKey();
   const { from, next } = monthRange(m);
 
   const rows = await db().select({
@@ -84,13 +86,11 @@ export default async function LedgerPage({ searchParams }: { searchParams: { m?:
                     <span className={"num text-[15px] font-bold " + (tx.type === "income" ? "text-good" : "")}>
                       {tx.type === "income" ? "+" : ""}{pkr(Number(tx.amount))}
                     </span>
-                    <form action={deleteTransaction}>
-                      <input type="hidden" name="id" value={tx.id} />
-                      <button aria-label="Delete entry"
-                        className="flex h-8 w-8 items-center justify-center border-2 border-line bg-card text-muted transition-all hover:bg-blush hover:text-ink hover:shadow-hardsm">
-                        <Trash2 size={14} strokeWidth={2.5} />
-                      </button>
-                    </form>
+                    <ConfirmDelete
+                      id={tx.id}
+                      label={tx.description || category || tx.type}
+                      action={deleteTransaction}
+                    />
                   </div>
                 </div>
               </div>

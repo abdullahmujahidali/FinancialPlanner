@@ -8,23 +8,24 @@ const COOKIE = "hb_session";
 const secret = () => new TextEncoder().encode(process.env.SESSION_SECRET || "dev-secret-change-me");
 
 export async function createSession(userId: number) {
+  const jar = await cookies();
   const jwt = await new SignJWT({ uid: userId })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("90d")
     .sign(secret());
-  cookies().set(COOKIE, jwt, {
+  jar.set(COOKIE, jwt, {
     httpOnly: true, sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     maxAge: 60 * 60 * 24 * 90, path: "/"
   });
 }
 
-export function clearSession() {
-  cookies().delete(COOKIE);
+export async function clearSession() {
+  (await cookies()).delete(COOKIE);
 }
 
 export async function currentUserId(): Promise<number | null> {
-  const c = cookies().get(COOKIE)?.value;
+  const c = (await cookies()).get(COOKIE)?.value;
   if (!c) return null;
   try {
     const { payload } = await jwtVerify(c, secret());

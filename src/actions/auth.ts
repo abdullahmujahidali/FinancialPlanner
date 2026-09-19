@@ -43,6 +43,6 @@ export async function login(formData: FormData) {
 }
 
 export async function logout() {
-  clearSession();
+  await clearSession();
   redirect("/login");
 }

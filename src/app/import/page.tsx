@@ -9,22 +9,23 @@ import { ArrowRight, Upload, CheckCircle2, AlertTriangle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function ImportPage({ searchParams }: { searchParams: { e?: string; done?: string } }) {
+export default async function ImportPage({ searchParams }: { searchParams: Promise<{ e?: string; done?: string }> }) {
+  const sp = await searchParams;
   const { household } = await requireContext();
   const accounts = await db().select().from(t.accounts)
     .where(and(eq(t.accounts.householdId, household.id), eq(t.accounts.isArchived, false), ne(t.accounts.kind, "cash")));
 
   let batch = null as null | typeof t.importBatches.$inferSelect;
-  if (searchParams.done) {
+  if (sp.done) {
     const rows = await db().select().from(t.importBatches)
-      .where(and(eq(t.importBatches.householdId, household.id), eq(t.importBatches.id, Number(searchParams.done)))).limit(1);
+      .where(and(eq(t.importBatches.householdId, household.id), eq(t.importBatches.id, Number(sp.done)))).limit(1);
     batch = rows[0] ?? null;
   }
 
   return (
     <Shell wide title="Import statement">
-      {searchParams.e && (
-        <p className="mb-4 border-2 border-line bg-blush px-3 py-2.5 text-sm font-bold">{searchParams.e}</p>
+      {sp.e && (
+        <p className="mb-4 border-2 border-line bg-blush px-3 py-2.5 text-sm font-bold">{sp.e}</p>
       )}
 
       {batch && (

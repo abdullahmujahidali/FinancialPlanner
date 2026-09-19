@@ -8,7 +8,8 @@ import { Plus, LogOut, X } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function SettingsPage({ searchParams }: { searchParams: { e?: string } }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ e?: string }> }) {
+  const sp = await searchParams;
   const { user, household, role } = await requireContext();
   const [accounts, categories, persons, rules, members] = await Promise.all([
     db().select().from(t.accounts).where(eq(t.accounts.householdId, household.id)).orderBy(asc(t.accounts.id)),
@@ -22,8 +23,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: { e
 
   return (
     <Shell wide title="Settings">
-      {searchParams.e && (
-        <p className="mb-4 border-2 border-line bg-blush px-3 py-2.5 text-sm font-bold">{searchParams.e}</p>
+      {sp.e && (
+        <p className="mb-4 border-2 border-line bg-blush px-3 py-2.5 text-sm font-bold">{sp.e}</p>
       )}
 
       {/* Two independent columns, each packing top-down: cards have very
