@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { db, t } from "@/db/client";
 import { eq } from "drizzle-orm";
 
-const COOKIE = "khata_session";
+const COOKIE = "hb_session";
 const secret = () => new TextEncoder().encode(process.env.SESSION_SECRET || "dev-secret-change-me");
 
 export async function createSession(userId: number) {

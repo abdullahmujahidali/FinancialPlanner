@@ -1,4 +1,4 @@
-# Khata — family finance ledger (context for Claude Code)
+# Hearthbook — family finance ledger (context for Claude Code)
 
 Household finance PWA for the Mujahid family (owner: Abdullah; daily user: Tooba, the
 family's "financial analyst"). Built to replace a Google Sheet. Multi-tenant from day

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
-  const isAuthed = req.cookies.has("khata_session");
+  const isAuthed = req.cookies.has("hb_session");
   const { pathname } = req.nextUrl;
   const isPublic = pathname.startsWith("/login") || pathname.startsWith("/manifest") ||
     pathname.startsWith("/sw.js") || pathname.startsWith("/icons") || pathname.startsWith("/_next");

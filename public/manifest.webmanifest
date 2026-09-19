@@ -1,6 +1,6 @@
 {
-  "name": "Khata — family ledger",
-  "short_name": "Khata",
+  "name": "Hearthbook — family ledger",
+  "short_name": "Hearthbook",
   "description": "Expenses, assets, goals — the family's one book.",
   "start_url": "/",
   "display": "standalone",

@@ -6,10 +6,10 @@ import SWRegister from "@/components/SWRegister";
 const sans = Instrument_Sans({ subsets: ["latin"], weight: ["400", "500", "600"] });
 
 export const metadata: Metadata = {
-  title: "Khata",
+  title: "Hearthbook",
   description: "The family ledger — expenses, assets, goals.",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "Khata" }
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Hearthbook" }
 };
 export const viewport: Viewport = {
   themeColor: "#F7F5EF",

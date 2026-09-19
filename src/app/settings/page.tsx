@@ -115,7 +115,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { e
       <form action={logout}>
         <button className="btn-quiet w-full">Sign out ({user.email})</button>
       </form>
-      <p className="mt-4 text-center text-xs text-muted">Khata v0.1</p>
+      <p className="mt-4 text-center text-xs text-muted">Hearthbook v0.1</p>
     </Shell>
   );
 }
