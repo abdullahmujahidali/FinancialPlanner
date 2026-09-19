@@ -11,6 +11,8 @@ export default async function LoginPage({ searchParams }: { searchParams: { e?: 
     <main className="min-h-screen bg-acid">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-5 py-12">
         <div className="mb-7">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/logo.svg" alt="" width={72} height={72} className="mb-4 border-2 border-line" />
           <h1 className="font-display text-[46px] font-extrabold leading-[0.95] tracking-[-0.04em]">
             Hearth<br />book
           </h1>
