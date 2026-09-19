@@ -1,0 +1,21 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <title>Hearthbook — an angular roof locked over three ascending blocks, marking a household whose savings grow</title>
+
+  <g id="field">
+    <rect x="0" y="0" width="512" height="512" fill="#0A0A0A"/>
+  </g>
+
+  <g id="roof">
+    <polygon points="256,56 480,184 480,268 256,140 32,268 32,184" fill="#E2FB4F"/>
+  </g>
+
+  <g id="bars">
+    <rect x="72" y="376" width="104" height="88" fill="#FFFFFF"/>
+    <rect x="204" y="312" width="104" height="152" fill="#E2FB4F"/>
+    <rect x="336" y="228" width="104" height="236" fill="#E2FB4F"/>
+  </g>
+
+  <g id="keystone">
+    <rect x="204" y="228" width="104" height="52" fill="#E98D7C"/>
+  </g>
+</svg>

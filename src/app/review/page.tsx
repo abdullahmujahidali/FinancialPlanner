@@ -37,9 +37,9 @@ export default async function ReviewPage() {
           <p className="mt-1 text-sm font-semibold">Nothing waiting for review.</p>
         </div>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           {pending.map((tx) => (
-            <form key={tx.id} action={resolveReview} className="border-2 border-line bg-card p-4">
+            <form key={tx.id} action={resolveReview} className="min-w-0 border-2 border-line bg-card p-4">
               <input type="hidden" name="id" value={tx.id} />
 
               <div className="mb-3 flex items-start justify-between gap-3">
@@ -54,7 +54,7 @@ export default async function ReviewPage() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <select name="categoryId" className="field py-2 text-sm" defaultValue={tx.categoryId ?? ""}>
                   <option value="">Category…</option>
                   {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}

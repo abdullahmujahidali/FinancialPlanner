@@ -1,0 +1,29 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <title>Hearthbook — a brutalist house with a pixel-block flame burning in its hearth</title>
+
+  <g id="canvas">
+    <rect x="0" y="0" width="512" height="512" fill="#E2FB4F"/>
+  </g>
+
+  <g id="house">
+    <polygon points="256,24 496,184 496,496 16,496 16,184" fill="#0A0A0A"/>
+  </g>
+
+  <g id="hearth-opening">
+    <rect x="96" y="232" width="320" height="232" fill="#FFFFFF"/>
+    <rect x="96" y="232" width="320" height="24" fill="#0A0A0A"/>
+    <rect x="96" y="440" width="320" height="24" fill="#0A0A0A"/>
+  </g>
+
+  <g id="flame">
+    <rect x="232" y="272" width="48" height="48" fill="#E98D7C"/>
+    <rect x="184" y="320" width="144" height="48" fill="#0A0A0A"/>
+    <rect x="160" y="368" width="192" height="72" fill="#0A0A0A"/>
+    <rect x="232" y="368" width="48" height="72" fill="#E2FB4F"/>
+  </g>
+
+  <g id="ledger-lines">
+    <rect x="16" y="184" width="480" height="24" fill="#E2FB4F"/>
+    <rect x="152" y="96" width="32" height="64" fill="#E2FB4F"/>
+  </g>
+</svg>
