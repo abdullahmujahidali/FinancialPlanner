@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BookOpen, Plus, Building2, Target, Upload, Settings, Inbox, CalendarRange } from "lucide-react";
+import { Home, BookOpen, Plus, Building2, Target, Upload, Settings, Inbox, CalendarRange, FolderOpen } from "lucide-react";
 
 /**
  * Grouped by how often each page is actually opened. Review is the daily job
@@ -28,6 +28,7 @@ const groups: Array<{ label?: string; items: Array<{ href: string; label: string
   {
     items: [
       { href: "/import", label: "Import CSV", Icon: Upload },
+      { href: "/files", label: "Files", Icon: FolderOpen },
       { href: "/settings", label: "Settings", Icon: Settings }
     ]
   }

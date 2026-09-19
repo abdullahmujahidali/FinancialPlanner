@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Menu as MenuIcon, X, Building2, Target, Inbox, Upload, Settings, LogOut, CalendarRange
+  Menu as MenuIcon, X, Building2, Target, Inbox, Upload, Settings, LogOut, CalendarRange, FolderOpen
 } from "lucide-react";
 
 const links = [
@@ -12,6 +12,7 @@ const links = [
   { href: "/goals", label: "Goals", Icon: Target },
   { href: "/review", label: "Review queue", Icon: Inbox },
   { href: "/import", label: "Import bank CSV", Icon: Upload },
+  { href: "/files", label: "Files & imports", Icon: FolderOpen },
   { href: "/settings", label: "Settings", Icon: Settings }
 ];
 
