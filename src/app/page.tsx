@@ -1,9 +1,10 @@
 import Link from "next/link";
 import Shell from "@/components/Shell";
+import CategoryDot from "@/components/CategoryDot";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
-import { pkr, monthKey, monthRange, monthLabel } from "@/lib/money";
+import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -23,25 +24,21 @@ export default async function Dashboard({ searchParams }: { searchParams: { m?: 
     .from(t.transactions).where(and(H, eq(t.transactions.needsReview, true)));
 
   const byCategory = await db().select({
-    name: t.categories.name,
-    total: sql<string>`sum(${t.transactions.amount})`
+    name: t.categories.name, total: sql<string>`sum(${t.transactions.amount})`
   }).from(t.transactions)
     .leftJoin(t.categories, eq(t.transactions.categoryId, t.categories.id))
     .where(and(inMonth, eq(t.transactions.type, "expense"), eq(t.transactions.isPassthrough, false)))
     .groupBy(t.categories.name)
-    .orderBy(desc(sql`sum(${t.transactions.amount})`))
-    .limit(6);
+    .orderBy(desc(sql`sum(${t.transactions.amount})`)).limit(6);
 
   const byPerson = await db().select({
-    name: t.persons.name,
-    total: sql<string>`sum(${t.transactions.amount})`
+    name: t.persons.name, total: sql<string>`sum(${t.transactions.amount})`
   }).from(t.transactions)
     .leftJoin(t.persons, eq(t.transactions.personId, t.persons.id))
     .where(and(inMonth, eq(t.transactions.type, "expense"), eq(t.transactions.isPassthrough, false)))
     .groupBy(t.persons.name)
     .orderBy(desc(sql`sum(${t.transactions.amount})`));
 
-  // net worth: latest value per active asset
   const netWorthRows = await db().execute(sql`
     select coalesce(sum(v.value), 0) as total from ${t.assets} a
     join lateral (
@@ -78,52 +75,57 @@ export default async function Dashboard({ searchParams }: { searchParams: { m?: 
 
   return (
     <Shell title={household.name} action={
-      <div className="flex items-center gap-2 text-sm">
-        <Link href={`/?m=${prev}`} className="btn-quiet px-2">‹</Link>
-        <span className="text-muted">{monthLabel(m)}</span>
-        <Link href={`/?m=${nextM}`} className="btn-quiet px-2">›</Link>
+      <div className="flex shrink-0 items-center gap-1 text-sm">
+        <Link href={`/?m=${prev}`} className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-card">‹</Link>
+        <span className="whitespace-nowrap px-1 text-muted">{monthLabelShort(m)}</span>
+        <Link href={`/?m=${nextM}`} className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-card">›</Link>
       </div>
     }>
+      {/* hero: the family's month, in one dark panel */}
+      <section className="mb-4 overflow-hidden rounded-3xl bg-forest text-cream shadow-[0_12px_32px_rgba(11,59,42,0.28)]">
+        <div className="p-5 pb-4">
+          <div className="flex items-baseline justify-between text-[13px]">
+            <span className="text-cream/60">Spent · {monthLabel(m)}</span>
+            <span className="num text-cream/60">of {pkr(budget, { compact: true })} budget</span>
+          </div>
+          <div className={"money mt-2 text-[46px] leading-none " + (over ? "text-[#F2B8A5]" : "")}>
+            {pkr(spend)}
+          </div>
+          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-cream/15">
+            <div className={"h-full rounded-full " + (over ? "bg-[#E58F73]" : "bg-gold")} style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 border-t border-cream/10 bg-forest2/60 px-5 py-3.5 text-sm">
+          <div><div className="text-[12px] text-cream/55">Income</div><div className="money mt-0.5 text-[17px]">{pkr(income, { compact: true })}</div></div>
+          <div><div className="text-[12px] text-cream/55">Saved</div><div className="money mt-0.5 text-[17px]">{pkr(savings, { compact: true })}</div></div>
+          <div><div className="text-[12px] text-cream/55">Incentive {household.incentivePct}%</div><div className="money mt-0.5 text-[17px] text-gold">{pkr(incentive, { compact: true })}</div></div>
+        </div>
+      </section>
+
       {reviewCount > 0 && (
-        <Link href="/review" className="mb-4 flex items-center justify-between rounded border border-flag/30 bg-flagsoft px-3 py-2.5 text-sm text-flag">
-          <span>{reviewCount} transaction{reviewCount > 1 ? "s" : ""} waiting for review</span>
-          <span>Review ›</span>
+        <Link href="/review" className="mb-4 flex items-center justify-between rounded-2xl border border-flag/25 bg-flagsoft px-4 py-3 text-sm text-flag">
+          <span className="font-medium">{reviewCount} transaction{reviewCount > 1 ? "s" : ""} waiting for review</span>
+          <span aria-hidden>›</span>
         </Link>
       )}
       {staleDays !== null && staleDays > 90 && (
-        <Link href="/assets" className="mb-4 block rounded border border-line bg-card px-3 py-2.5 text-sm text-muted">
+        <Link href="/assets" className="panel mb-4 block px-4 py-3 text-sm text-muted">
           Asset values last updated {staleDays} days ago — quarterly check due ›
         </Link>
       )}
 
-      <section className="mb-5 rounded-lg border border-line bg-card p-4">
-        <div className="flex items-baseline justify-between">
-          <span className="text-sm text-muted">Spent this month</span>
-          <span className="text-sm text-muted num">budget {pkr(budget, { compact: true })}</span>
-        </div>
-        <div className={"num mt-1 text-[34px] font-semibold leading-tight " + (over ? "text-over" : "")}>{pkr(spend)}</div>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-paper">
-          <div className={"h-full " + (over ? "bg-over" : "bg-brand")} style={{ width: `${pct}%` }} />
-        </div>
-        <div className="mt-3 grid grid-cols-3 gap-2 border-t border-line pt-3 text-sm">
-          <div><div className="text-muted">Income</div><div className="num font-medium">{pkr(income, { compact: true })}</div></div>
-          <div><div className="text-muted">Saved</div><div className="num font-medium">{pkr(savings, { compact: true })}</div></div>
-          <div><div className="text-muted">Incentive {household.incentivePct}%</div><div className="num font-medium text-brand">{pkr(incentive, { compact: true })}</div></div>
-        </div>
-      </section>
-
-      <section className="mb-5 flex items-baseline justify-between rounded-lg border border-line bg-card p-4">
+      <Link href="/assets" className="panel mb-4 flex items-baseline justify-between px-4 py-4">
         <span className="text-sm text-muted">Net worth</span>
-        <Link href="/assets" className="num text-xl font-semibold">{pkr(netWorth, { compact: true })}</Link>
-      </section>
+        <span className="money text-[22px]">{pkr(netWorth, { compact: true })}</span>
+      </Link>
 
       {byCategory.length > 0 && (
-        <section className="mb-5">
-          <h2 className="mb-2 text-sm font-medium text-muted">Where it went</h2>
-          <div className="rounded-lg border border-line bg-card">
+        <section className="mb-4">
+          <h2 className="mb-2 px-1 text-[13px] font-medium text-muted">Where it went</h2>
+          <div className="panel">
             {byCategory.map((c, i) => (
-              <div key={i} className={"flex justify-between px-4 py-2.5 text-[15px] " + (i < byCategory.length - 1 ? "rule-row" : "")}>
-                <span>{c.name ?? "Uncategorised"}</span>
+              <div key={i} className={"flex items-center justify-between gap-3 px-4 py-3 text-[15px] " + (i < byCategory.length - 1 ? "rule-row" : "")}>
+                <span className="flex items-center gap-2.5"><CategoryDot name={c.name ?? "Uncategorised"} />{c.name ?? "Uncategorised"}</span>
                 <span className="num font-medium">{pkr(Number(c.total))}</span>
               </div>
             ))}
@@ -132,11 +134,11 @@ export default async function Dashboard({ searchParams }: { searchParams: { m?: 
       )}
 
       {byPerson.some(p => p.name) && (
-        <section className="mb-5">
-          <h2 className="mb-2 text-sm font-medium text-muted">By person</h2>
-          <div className="rounded-lg border border-line bg-card">
+        <section className="mb-4">
+          <h2 className="mb-2 px-1 text-[13px] font-medium text-muted">By person</h2>
+          <div className="panel">
             {byPerson.map((p, i) => (
-              <div key={i} className={"flex justify-between px-4 py-2.5 text-[15px] " + (i < byPerson.length - 1 ? "rule-row" : "")}>
+              <div key={i} className={"flex justify-between px-4 py-3 text-[15px] " + (i < byPerson.length - 1 ? "rule-row" : "")}>
                 <span>{p.name ?? "Household"}</span>
                 <span className="num font-medium">{pkr(Number(p.total))}</span>
               </div>
@@ -146,20 +148,20 @@ export default async function Dashboard({ searchParams }: { searchParams: { m?: 
       )}
 
       {activeGoals.length > 0 && (
-        <section className="mb-5">
-          <h2 className="mb-2 text-sm font-medium text-muted">Goals</h2>
-          <div className="space-y-2">
+        <section className="mb-4">
+          <h2 className="mb-2 px-1 text-[13px] font-medium text-muted">Goals</h2>
+          <div className="space-y-2.5">
             {activeGoals.map((g) => {
               const saved = goalSums.get(g.id) ?? 0;
               const gp = Math.min(100, Math.round((saved / Number(g.targetAmount)) * 100));
               return (
-                <Link key={g.id} href="/goals" className="block rounded-lg border border-line bg-card p-3.5">
+                <Link key={g.id} href="/goals" className="panel block p-4">
                   <div className="flex justify-between text-[15px]">
                     <span className="font-medium">{g.name}</span>
                     <span className="num text-muted">{pkr(saved, { compact: true })} / {pkr(Number(g.targetAmount), { compact: true })}</span>
                   </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-paper">
-                    <div className="h-full bg-brand" style={{ width: `${gp}%` }} />
+                  <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-paper">
+                    <div className="h-full rounded-full bg-brand" style={{ width: `${gp}%` }} />
                   </div>
                 </Link>
               );

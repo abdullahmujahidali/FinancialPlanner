@@ -4,19 +4,26 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        paper: "#F7F5EF",
-        card: "#FFFFFF",
+        paper: "#F4F0E6",
+        card: "#FDFBF5",
         ink: "#20261F",
-        muted: "#6B7267",
-        line: "#E2DFD5",
+        muted: "#78715F",
+        line: "#E4DECC",
+        forest: "#0B3B2A",
+        forest2: "#0F4A35",
+        cream: "#F6F1E1",
+        gold: "#C7A14A",
         brand: "#0E6E4C",
         brandsoft: "#E4EFE7",
         flag: "#9A6700",
-        flagsoft: "#FBF0DA",
+        flagsoft: "#F8EFD9",
         over: "#B3402A",
         oversoft: "#F7E4DE"
       },
-      borderRadius: { DEFAULT: "6px" }
+      fontFamily: {
+        display: ["var(--font-display)", "serif"],
+        sans: ["var(--font-sans)", "sans-serif"]
+      }
     }
   },
   plugins: []

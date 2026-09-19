@@ -21,9 +21,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: { e
 
   return (
     <Shell title="Settings">
-      {searchParams.e && <p className="mb-4 rounded bg-oversoft px-3 py-2 text-sm text-over">{searchParams.e}</p>}
+      {searchParams.e && <p className="mb-4 rounded-xl bg-oversoft px-3 py-2 text-sm text-over">{searchParams.e}</p>}
 
-      <section className="mb-5 rounded-lg border border-line bg-card p-4">
+      <section className="mb-5 panel p-4">
         <h2 className="mb-3 text-sm font-medium">Household</h2>
         <form action={updateHousehold} className="space-y-3">
           <input name="name" defaultValue={household.name} className="field" />
@@ -39,7 +39,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { e
         </form>
       </section>
 
-      <section className="mb-5 rounded-lg border border-line bg-card p-4">
+      <section className="mb-5 panel p-4">
         <h2 className="mb-3 text-sm font-medium">Accounts</h2>
         <div className="mb-3 space-y-1.5 text-sm">
           {accounts.map(a => (
@@ -58,7 +58,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { e
         </form>
       </section>
 
-      <section className="mb-5 rounded-lg border border-line bg-card p-4">
+      <section className="mb-5 panel p-4">
         <h2 className="mb-3 text-sm font-medium">Categories</h2>
         <div className="mb-3 flex flex-wrap gap-1.5">
           {categories.map(c => <span key={c.id} className="chip">{c.name}{c.passthroughDefault ? " ⇄" : ""}</span>)}
@@ -70,7 +70,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { e
         </form>
       </section>
 
-      <section className="mb-5 rounded-lg border border-line bg-card p-4">
+      <section className="mb-5 panel p-4">
         <h2 className="mb-3 text-sm font-medium">People (for expense tagging)</h2>
         <div className="mb-3 flex flex-wrap gap-1.5">
           {persons.map(p => <span key={p.id} className="chip">{p.name}</span>)}
@@ -81,7 +81,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { e
         </form>
       </section>
 
-      <section className="mb-5 rounded-lg border border-line bg-card p-4">
+      <section className="mb-5 panel p-4">
         <h2 className="mb-3 text-sm font-medium">Members</h2>
         <div className="mb-3 space-y-1 text-sm">
           {members.map((mb, i) => <div key={i}>{mb.name} <span className="text-xs text-muted">· {mb.email} · {mb.role}</span></div>)}
@@ -99,7 +99,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { e
       </section>
 
       {rules.length > 0 && (
-        <section className="mb-5 rounded-lg border border-line bg-card p-4">
+        <section className="mb-5 panel p-4">
           <h2 className="mb-3 text-sm font-medium">Import rules ({rules.length})</h2>
           <div className="space-y-1.5 text-sm">
             {rules.map(r => (

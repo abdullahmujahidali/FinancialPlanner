@@ -30,15 +30,15 @@ export default async function AssetsPage({ searchParams }: { searchParams: { e?:
   }
 
   return (
-    <Shell title="Assets" action={<span className="num text-lg font-semibold">{pkr(netWorth, { compact: true })}</span>}>
-      {searchParams.e && <p className="mb-4 rounded bg-oversoft px-3 py-2 text-sm text-over">{searchParams.e}</p>}
+    <Shell title="Assets" action={<span className="money text-[22px]">{pkr(netWorth, { compact: true })}</span>}>
+      {searchParams.e && <p className="mb-4 rounded-xl bg-oversoft px-3 py-2 text-sm text-over">{searchParams.e}</p>}
 
       <div className="mb-6 space-y-3">
         {assets.map((a) => {
           const v = values.get(a.id)!;
           const delta = v.latest - Number(a.purchasePrice);
           return (
-            <div key={a.id} className={"rounded-lg border border-line bg-card p-4 " + (a.status === "sold" ? "opacity-60" : "")}>
+            <div key={a.id} className={"panel p-4 " + (a.status === "sold" ? "opacity-60" : "")}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                   {photoByAsset.has(a.id) && (
@@ -51,7 +51,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: { e?:
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="num font-semibold">{pkr(v.latest, { compact: true })}</div>
+                  <div className="money text-[17px]">{pkr(v.latest, { compact: true })}</div>
                   <div className={"num text-xs " + (delta >= 0 ? "text-brand" : "text-over")}>{delta >= 0 ? "+" : ""}{pkr(delta, { compact: true })}</div>
                 </div>
               </div>
@@ -79,7 +79,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: { e?:
       {byYear.size > 0 && (
         <section className="mb-6">
           <h2 className="mb-2 text-sm font-medium text-muted">Bought by year</h2>
-          <div className="rounded-lg border border-line bg-card">
+          <div className="panel">
             {[...byYear.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([year, list], i, arr) => (
               <div key={year} className={"flex justify-between px-4 py-2.5 text-[15px] " + (i < arr.length - 1 ? "rule-row" : "")}>
                 <span>{year} <span className="text-muted">· {list.map(x => x.name).join(", ")}</span></span>
@@ -90,7 +90,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: { e?:
         </section>
       )}
 
-      <section className="rounded-lg border border-line bg-card p-4">
+      <section className="panel p-4">
         <h2 className="mb-3 text-sm font-medium">Add an asset</h2>
         <form action={addAsset} className="space-y-3">
           <input name="name" placeholder="e.g. 10 marla plot, LDA City Ph-1 H-101" className="field" required />

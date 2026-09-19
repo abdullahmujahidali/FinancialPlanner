@@ -24,13 +24,13 @@ export default async function EntryPage({ searchParams }: { searchParams: { ok?:
           {[["expense", "Expense"], ["income", "Income"], ["transfer", "Transfer"]].map(([v, label], i) => (
             <label key={v} className="flex-1">
               <input type="radio" name="type" value={v} defaultChecked={i === 0} className="peer sr-only" />
-              <span className="block cursor-pointer rounded border border-line bg-card py-2 text-center text-sm peer-checked:border-brand peer-checked:bg-brandsoft peer-checked:text-brand">{label}</span>
+              <span className="block cursor-pointer rounded-full border border-line bg-card py-2.5 text-center text-sm peer-checked:border-brand peer-checked:bg-brandsoft peer-checked:text-brand">{label}</span>
             </label>
           ))}
         </div>
 
         <input name="amount" type="number" inputMode="numeric" step="0.01" min="1" placeholder="0"
-          className="field num text-center text-[34px] font-semibold" required autoFocus />
+          className="field money text-center text-[38px]" required autoFocus />
 
         <div className="grid grid-cols-2 gap-2">
           <label className="text-sm text-muted">From / account

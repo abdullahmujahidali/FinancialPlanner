@@ -26,6 +26,10 @@ export function monthLabel(m: string) {
   const [y, mo] = m.split("-").map(Number);
   return new Date(y, mo - 1, 1).toLocaleDateString("en-PK", { month: "long", year: "numeric" });
 }
+export function monthLabelShort(m: string) {
+  const [y, mo] = m.split("-").map(Number);
+  return new Date(y, mo - 1, 1).toLocaleDateString("en-PK", { month: "short", year: "numeric" });
+}
 export function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }

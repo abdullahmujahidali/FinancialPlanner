@@ -20,14 +20,14 @@ export default async function GoalsPage({ searchParams }: { searchParams: { e?: 
 
   return (
     <Shell title="Goals">
-      {searchParams.e && <p className="mb-4 rounded bg-oversoft px-3 py-2 text-sm text-over">{searchParams.e}</p>}
+      {searchParams.e && <p className="mb-4 rounded-xl bg-oversoft px-3 py-2 text-sm text-over">{searchParams.e}</p>}
       <div className="mb-6 space-y-3">
         {goals.map((g) => {
           const saved = sums.get(g.id) ?? 0;
           const pct = Math.min(100, Math.round((saved / Number(g.targetAmount)) * 100));
           const done = g.status === "done";
           return (
-            <div key={g.id} className={"rounded-lg border border-line bg-card p-4 " + (done ? "opacity-60" : "")}>
+            <div key={g.id} className={"panel p-4 " + (done ? "opacity-60" : "")}>
               <div className="flex items-baseline justify-between">
                 <span className="font-medium">{g.name}{done && <span className="tag ml-2 bg-brandsoft text-brand">done</span>}</span>
                 <span className="num text-sm text-muted">{pkr(saved, { compact: true })} / {pkr(Number(g.targetAmount), { compact: true })}</span>
@@ -58,7 +58,7 @@ export default async function GoalsPage({ searchParams }: { searchParams: { e?: 
         })}
       </div>
 
-      <section className="rounded-lg border border-line bg-card p-4">
+      <section className="panel p-4">
         <h2 className="mb-3 text-sm font-medium">New goal</h2>
         <form action={addGoal} className="space-y-3">
           <input name="name" placeholder="e.g. Family car" className="field" required />
