@@ -33,29 +33,29 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
   let lastDate = "";
   return (
     <Shell title="Ledger" action={
-      <div className="flex shrink-0 items-center gap-1.5">
+      <div className="flex shrink-0 items-center gap-1">
         <Link href={`/ledger?m=${prev}`} aria-label="Previous month"
-          className="flex h-9 w-9 items-center justify-center border-2 border-line bg-card transition-all hover:shadow-hardsm">
-          <ChevronLeft size={17} strokeWidth={2.75} />
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-ink transition hover:bg-page">
+          <ChevronLeft size={18} strokeWidth={2.5} />
         </Link>
-        <span className="whitespace-nowrap px-1 text-[13px] font-bold">{monthLabelShort(m)}</span>
+        <span className="whitespace-nowrap px-2 text-[13px] font-bold">{monthLabelShort(m)}</span>
         <Link href={`/ledger?m=${nextM}`} aria-label="Next month"
-          className="flex h-9 w-9 items-center justify-center border-2 border-line bg-card transition-all hover:shadow-hardsm">
-          <ChevronRight size={17} strokeWidth={2.75} />
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-ink transition hover:bg-page">
+          <ChevronRight size={18} strokeWidth={2.5} />
         </Link>
       </div>
     }>
       {rows.length === 0 ? (
-        <div className="block-card p-6">
-          <h2 className="eyebrow">{monthLabel(m)}</h2>
-          <p className="mt-2 text-[15px] font-semibold text-muted">
+        <section className="zone-card">
+          <h2 className="eyebrow text-muted">{monthLabel(m)}</h2>
+          <p className="mt-3 text-[15px] font-semibold text-muted">
             No entries this month yet. Add one from the + tab, or import a bank CSV.
           </p>
-          <Link href="/import" className="btn btn-sm mt-4">Import bank CSV</Link>
-        </div>
+          <Link href="/import" className="btn mt-6">Import bank CSV</Link>
+        </section>
       ) : (
-        <div className="block-card">
-          <div className="flex items-baseline justify-between border-b-2 border-line bg-acid px-4 py-3 lg:px-5">
+        <div className="overflow-hidden rounded-[22px] bg-card">
+          <div className="flex items-baseline justify-between gap-3 bg-acid px-6 py-5 lg:px-8">
             <h2 className="eyebrow">{monthLabel(m)}</h2>
             <span className="num text-[12px] font-bold">{rows.length} entries</span>
           </div>
@@ -63,23 +63,24 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
             const showDate = tx.txDate !== lastDate;
             lastDate = tx.txDate;
             return (
-              <div key={tx.id} className={i < rows.length - 1 ? "rule-row" : ""}>
+              <div key={tx.id}>
                 {showDate && (
-                  <div className="eyebrow border-b-2 border-line bg-paper px-4 py-2 text-muted lg:px-5">
+                  <div className="eyebrow bg-page px-6 py-2.5 text-muted lg:px-8">
                     {new Date(tx.txDate).toLocaleDateString("en-PK", { weekday: "short", day: "numeric", month: "short" })}
                   </div>
                 )}
-                <div className="flex items-start justify-between gap-3 px-4 py-3 lg:px-5">
+                <div className={"flex items-start justify-between gap-4 px-6 py-4 lg:px-8 "
+                  + (i < rows.length - 1 && rows[i + 1].tx.txDate === tx.txDate ? "rule-row" : "")}>
                   <div className="min-w-0">
                     <div className="truncate text-[15px] font-semibold">{tx.description || category || tx.type}</div>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[12px] font-medium text-muted">
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] font-medium text-muted">
                       <span>{account}</span>
                       {category && <span>· {category}</span>}
                       {person && <span>· {person}</span>}
-                      {tx.isPassthrough && <span className="tag bg-acid text-ink">pass-through</span>}
-                      {tx.isAbnormal && <span className="tag bg-blush text-ink">one-off</span>}
-                      {tx.needsReview && <span className="tag bg-blush text-ink">review</span>}
-                      {tx.type === "transfer" && <span className="tag bg-paper text-ink">transfer</span>}
+                      {tx.isPassthrough && <span className="tag-acid">pass-through</span>}
+                      {tx.isAbnormal && <span className="tag-blush">one-off</span>}
+                      {tx.needsReview && <span className="tag-blush">review</span>}
+                      {tx.type === "transfer" && <span className="tag-muted">transfer</span>}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-3">

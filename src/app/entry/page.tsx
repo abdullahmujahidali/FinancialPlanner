@@ -19,19 +19,19 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
   return (
     <Shell title="Add entry">
       {sp.ok && (
-        <p className="mb-4 border-2 border-line bg-acid px-3 py-2.5 text-sm font-bold">Saved.</p>
+        <p className="mb-5 rounded-[18px] bg-acid px-6 py-4 text-[14px] font-bold">Saved.</p>
       )}
       {sp.e && (
-        <p className="mb-4 border-2 border-line bg-blush px-3 py-2.5 text-sm font-bold">{sp.e}</p>
+        <p className="mb-5 rounded-[18px] bg-blush px-6 py-4 text-[14px] font-bold">{sp.e}</p>
       )}
 
       <form action={addTransaction} className="space-y-5">
-        {/* type switch — hard segmented blocks */}
-        <div className="grid grid-cols-3 border-2 border-line">
+        {/* type switch — rounded segmented pills */}
+        <div className="grid grid-cols-3 gap-1.5 rounded-full bg-card p-1.5">
           {[["expense", "Expense"], ["income", "Income"], ["transfer", "Transfer"]].map(([v, label], i) => (
-            <label key={v} className={i < 2 ? "border-r-2 border-line" : ""}>
+            <label key={v}>
               <input type="radio" name="type" value={v} defaultChecked={i === 0} className="peer sr-only" />
-              <span className="block cursor-pointer bg-card py-3 text-center text-sm font-bold transition-colors peer-checked:bg-ink peer-checked:text-acid">
+              <span className="block cursor-pointer rounded-full py-2.5 text-center text-[14px] font-bold transition peer-checked:bg-ink peer-checked:text-acid">
                 {label}
               </span>
             </label>
@@ -39,7 +39,7 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
         </div>
 
         {/* the amount — the one thing this screen is for */}
-        <div className="border-2 border-line bg-acid px-4 pb-5 pt-4">
+        <div className="zone-acid">
           <label htmlFor="amount" className="eyebrow">Amount (PKR)</label>
           <input
             id="amount"
@@ -51,74 +51,74 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
             placeholder="0"
             required
             autoFocus
-            className="money-xl mt-1 w-full border-0 bg-transparent p-0 text-[52px] outline-none placeholder:text-ink/25 lg:text-[64px]"
+            className="money-xl mt-3 w-full border-0 bg-transparent p-0 text-[56px] outline-none placeholder:text-ink/25 lg:text-[72px]"
           />
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-5 rounded-[22px] bg-card p-6 lg:grid-cols-2 lg:p-8">
           <label className="block">
-            <span className="eyebrow">From / account</span>
-            <select name="accountId" className="field mt-1.5">
+            <span className="eyebrow text-muted">From / account</span>
+            <select name="accountId" className="field mt-2">
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </label>
 
           <label className="block">
-            <span className="eyebrow">Date</span>
-            <input name="txDate" type="date" defaultValue={todayStr()} className="field mt-1.5" />
+            <span className="eyebrow text-muted">Date</span>
+            <input name="txDate" type="date" defaultValue={todayStr()} className="field mt-2" />
           </label>
 
           <label className="block">
-            <span className="eyebrow">To (transfers only)</span>
-            <select name="counterAccountId" className="field mt-1.5">
+            <span className="eyebrow text-muted">To (transfers only)</span>
+            <select name="counterAccountId" className="field mt-2">
               <option value="">—</option>
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </label>
 
           <label className="block">
-            <span className="eyebrow">Category</span>
-            <select name="categoryId" className="field mt-1.5">
+            <span className="eyebrow text-muted">Category</span>
+            <select name="categoryId" className="field mt-2">
               <option value="">—</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </label>
 
           <label className="block lg:col-span-2">
-            <span className="eyebrow">Person <span className="font-semibold normal-case tracking-normal text-muted">— default is the whole household</span></span>
-            <select name="personId" className="field mt-1.5">
+            <span className="eyebrow text-muted">Person <span className="font-semibold normal-case tracking-normal text-muted">— default is the whole household</span></span>
+            <select name="personId" className="field mt-2">
               <option value="">Household</option>
               {persons.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </label>
 
           <label className="block lg:col-span-2">
-            <span className="eyebrow">Note</span>
-            <input name="description" placeholder="Optional" className="field mt-1.5" />
+            <span className="eyebrow text-muted">Note</span>
+            <input name="description" placeholder="Optional" className="field mt-2" />
           </label>
         </div>
 
-        <fieldset className="border-2 border-line bg-card p-4">
-          <legend className="eyebrow px-1">Flags</legend>
-          <div className="flex flex-wrap gap-x-5 gap-y-3 text-sm font-semibold">
+        <fieldset className="rounded-[22px] bg-card p-6 lg:p-8">
+          <legend className="eyebrow text-muted">Flags</legend>
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-3.5 text-[14px] font-semibold">
             <label className="flex items-center gap-2">
-              <input type="checkbox" name="isAbnormal" className="h-4 w-4 accent-ink" /> One-off / abnormal
+              <input type="checkbox" name="isAbnormal" className="h-4 w-4 rounded accent-ink" /> One-off / abnormal
             </label>
             <label className="flex items-center gap-2">
-              <input type="checkbox" name="isPassthrough" className="h-4 w-4 accent-ink" /> Pass-through (reimbursed)
+              <input type="checkbox" name="isPassthrough" className="h-4 w-4 rounded accent-ink" /> Pass-through (reimbursed)
             </label>
             <label className="flex items-center gap-2">
-              <input type="checkbox" name="needsReview" className="h-4 w-4 accent-ink" /> Flag a question
+              <input type="checkbox" name="needsReview" className="h-4 w-4 rounded accent-ink" /> Flag a question
             </label>
           </div>
         </fieldset>
 
-        <label className="block">
-          <span className="eyebrow">Receipt / photo <span className="font-semibold normal-case tracking-normal text-muted">— up to 2 MB</span></span>
-          <input name="receipt" type="file" accept="image/*,.pdf" className="field mt-1.5 file:mr-3 file:border-0 file:bg-ink file:px-3 file:py-1 file:text-sm file:font-bold file:text-acid" />
+        <label className="block rounded-[22px] bg-card p-6 lg:p-8">
+          <span className="eyebrow text-muted">Receipt / photo <span className="font-semibold normal-case tracking-normal">— up to 2 MB</span></span>
+          <input name="receipt" type="file" accept="image/*,.pdf" className="field mt-3 file:mr-3 file:rounded-full file:border-0 file:bg-ink file:px-4 file:py-1.5 file:text-[13px] file:font-bold file:text-acid" />
         </label>
 
-        <button className="btn w-full text-[16px]">Save entry</button>
+        <button className="btn w-full py-4 text-[16px]">Save entry</button>
       </form>
     </Shell>
   );

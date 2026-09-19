@@ -23,15 +23,15 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
   return (
     <Shell wide title="Goals">
       {sp.e && (
-        <p className="mb-4 border-2 border-line bg-blush px-3 py-2.5 text-sm font-bold">{sp.e}</p>
+        <p className="mb-5 rounded-[14px] bg-blush px-4 py-3 text-sm font-bold">{sp.e}</p>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
         {/* ── Goal cards ───────────────────────────────────────────────── */}
-        <div className="space-y-4">
+        <div className="flex flex-col gap-5 lg:w-1/2 lg:shrink-0">
           {goals.length === 0 && (
-            <div className="block-card flex items-center gap-3 p-5 text-sm font-semibold text-muted">
-              <Target size={18} strokeWidth={2.75} />
+            <div className="zone-card flex items-center gap-3 text-[15px] font-semibold text-muted">
+              <Target size={19} strokeWidth={2.5} className="shrink-0" />
               No goals yet — add one on the right.
             </div>
           )}
@@ -41,49 +41,50 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
             const pct = Math.min(100, Math.round((saved / Number(g.targetAmount)) * 100));
             const done = g.status === "done";
             return (
-              <div key={g.id} className={"block-card " + (done ? "opacity-60" : "")}>
-                <div className="border-b-2 border-line p-4 lg:p-5">
+              <div key={g.id}
+                className={"overflow-hidden rounded-[22px] bg-card " + (done ? "opacity-60" : "")}>
+                <div className="p-6 lg:p-8">
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="flex min-w-0 items-center gap-2 text-[16px] font-bold">
+                    <span className="flex min-w-0 items-center gap-2.5 text-[17px] font-bold">
                       <span className="truncate">{g.name}</span>
-                      {done && <span className="tag shrink-0 bg-acid">done</span>}
+                      {done && <span className="tag-acid shrink-0">done</span>}
                     </span>
                     <span className="num shrink-0 text-[13px] font-bold text-muted">
                       {pkr(saved, { compact: true })} / {pkr(Number(g.targetAmount), { compact: true })}
                     </span>
                   </div>
                   {g.deadline && (
-                    <div className="eyebrow mt-1.5 text-muted">by {g.deadline}</div>
+                    <div className="eyebrow mt-2 text-muted">by {g.deadline}</div>
                   )}
-                  <div className="mt-3 h-4 border-2 border-line bg-paper">
-                    <div className="h-full bg-acid" style={{ width: `${pct}%` }} />
+                  <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-page">
+                    <div className="h-full rounded-full bg-acid" style={{ width: `${pct}%` }} />
                   </div>
-                  <div className="mt-2 text-[12px] font-bold">{pct}% saved</div>
+                  <div className="mt-3 text-[13px] font-bold">{pct}% saved</div>
                 </div>
 
                 {!done && (
-                  <div className="space-y-3 p-4 lg:p-5">
-                    <form action={contributeToGoal} className="flex gap-2">
+                  <div className="space-y-5 bg-page p-6 lg:p-8">
+                    <form action={contributeToGoal} className="flex gap-2.5">
                       <input type="hidden" name="goalId" value={g.id} />
                       <input name="amount" type="number" inputMode="numeric" placeholder="Add savings"
-                        className="field num min-w-0 px-3 py-2 text-sm" />
-                      <input name="note" placeholder="note" className="field min-w-0 px-3 py-2 text-sm" />
-                      <button className="btn btn-sm shrink-0" aria-label="Add contribution">
-                        <Plus size={15} strokeWidth={3} />
+                        className="field num min-w-0" />
+                      <input name="note" placeholder="note" className="field min-w-0" />
+                      <button className="btn shrink-0 px-4" aria-label="Add contribution">
+                        <Plus size={17} strokeWidth={2.75} />
                       </button>
                     </form>
 
-                    <form action={completeGoal} className="space-y-2 border-t-2 border-line pt-3">
+                    <form action={completeGoal} className="space-y-3">
                       <input type="hidden" name="goalId" value={g.id} />
-                      <label className="flex items-center gap-2 text-[12px] font-bold">
-                        <input type="checkbox" name="makeAsset" defaultChecked className="h-4 w-4 accent-ink" />
+                      <label className="flex items-center gap-2 text-[13px] font-bold">
+                        <input type="checkbox" name="makeAsset" defaultChecked className="h-4 w-4 rounded accent-ink" />
                         Convert to asset
                       </label>
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2.5">
                         <input name="assetName" placeholder="Asset name"
-                          className="field min-w-0 flex-1 px-3 py-2 text-sm" />
+                          className="field min-w-0 flex-1" />
                         <input name="purchasePrice" type="number" inputMode="numeric" placeholder="Price"
-                          className="field num w-24 shrink-0 grow-0 px-3 py-2 text-sm" />
+                          className="field num w-24 shrink-0 grow-0 px-3" />
                         <button className="btn-quiet btn-sm shrink-0">
                           <Check size={15} strokeWidth={3} />
                           Complete
@@ -98,21 +99,23 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
         </div>
 
         {/* ── New goal ─────────────────────────────────────────────────── */}
-        <section className="block-card lg:sticky lg:top-8">
-          <h2 className="eyebrow border-b-2 border-line bg-acid px-5 py-3">New goal</h2>
-          <form action={addGoal} className="space-y-3 p-4 lg:p-5">
-            <input name="name" placeholder="e.g. Family car" className="field" required />
-            <div className="grid grid-cols-2 gap-2">
-              <input name="targetAmount" type="number" inputMode="numeric" placeholder="Target (PKR)"
-                className="field num" required />
-              <input name="deadline" type="date" className="field" />
-            </div>
-            <button className="btn w-full">
-              <Plus size={16} strokeWidth={3} />
-              Add goal
-            </button>
-          </form>
-        </section>
+        <div className="flex flex-col gap-5 lg:min-w-0 lg:flex-1">
+          <section className="zone-acid lg:sticky lg:top-8">
+            <h2 className="eyebrow">New goal</h2>
+            <form action={addGoal} className="mt-6 space-y-4">
+              <input name="name" placeholder="e.g. Family car" className="field" required />
+              <div className="grid grid-cols-2 gap-3">
+                <input name="targetAmount" type="number" inputMode="numeric" placeholder="Target (PKR)"
+                  className="field num" required />
+                <input name="deadline" type="date" className="field" />
+              </div>
+              <button className="btn w-full">
+                <Plus size={17} strokeWidth={2.75} />
+                Add goal
+              </button>
+            </form>
+          </section>
+        </div>
       </div>
     </Shell>
   );

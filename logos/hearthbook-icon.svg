@@ -1,32 +1,33 @@
 <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <title>Hearthbook — a brutalist house whose hearth burns a stepped block flame</title>
+  <title>Hearthbook — a house whose hearth burns a stepped block flame</title>
 
-  <!-- Black field: reads as a solid app-icon tile and keeps the lime as accent. -->
-  <rect width="512" height="512" fill="#0A0A0A"/>
+  <!-- Rounded black tile: matches the app's 22px-radius geometry at icon scale. -->
+  <rect width="512" height="512" rx="112" fill="#0E0E0E"/>
 
-  <!-- Chimney sits behind the gable, separated by a black gap so the two
-       shapes stay distinct instead of merging into one blob when scaled down. -->
+  <!-- Chimney, set behind the gable with a gap so the two shapes stay distinct. -->
   <g id="chimney">
-    <rect x="352" y="96" width="56" height="132" fill="#E2FB4F"/>
+    <rect x="344" y="112" width="52" height="120" rx="14" fill="#E2FB4F"/>
   </g>
-  <rect x="336" y="96" width="16" height="132" fill="#0A0A0A"/>
+  <rect x="330" y="112" width="16" height="120" fill="#0E0E0E"/>
 
-  <!-- House: lime gable + body, inset so the tile keeps a black margin. -->
+  <!-- House: gable + body, inset so the tile keeps a comfortable margin. -->
   <g id="house">
-    <polygon points="256,40 472,200 472,472 40,472 40,200" fill="#E2FB4F"/>
+    <path d="M256 74 L436 206 a18 18 0 0 1 8 15 V420 a26 26 0 0 1-26 26 H94 a26 26 0 0 1-26-26 V221 a18 18 0 0 1 8-15 Z"
+          fill="#E2FB4F"/>
   </g>
 
-  <!-- Hearth: a black opening cut into the house. Its floor is left open at the
-       bottom so the flame sits IN the fire, not on a shelf. -->
+  <!-- Hearth: the opening, open at the base so the flame sits in the fire. -->
   <g id="hearth">
-    <rect x="120" y="260" width="272" height="212" fill="#0A0A0A"/>
+    <path d="M148 286 h216 v160 H148 Z M148 286 a22 22 0 0 1 22-22 h172 a22 22 0 0 1 22 22"
+          fill="#0E0E0E"/>
+    <rect x="148" y="286" width="216" height="160" fill="#0E0E0E"/>
+    <rect x="148" y="264" width="216" height="44" rx="22" fill="#0E0E0E"/>
   </g>
 
-  <!-- Flame: three stacked steps, widest at the base, narrowing to a salmon tip.
-       Gaps on both sides keep it clear of the hearth walls. -->
+  <!-- Flame: three stacked steps, widest at the base, salmon tip. -->
   <g id="flame">
-    <rect x="232" y="300" width="48" height="56" fill="#E98D7C"/>
-    <rect x="200" y="356" width="112" height="56" fill="#E2FB4F"/>
-    <rect x="168" y="412" width="176" height="60" fill="#E2FB4F"/>
+    <rect x="234" y="310" width="44" height="54" rx="12" fill="#E98D7C"/>
+    <rect x="202" y="352" width="108" height="52" rx="14" fill="#E2FB4F"/>
+    <rect x="174" y="394" width="164" height="52" rx="16" fill="#E2FB4F"/>
   </g>
 </svg>

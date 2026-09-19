@@ -1,6 +1,6 @@
 /**
- * Income vs expense, month by month. Paired bars: income lime, expense black,
- * the current month hatched — matching the reference's treatment.
+ * Income vs expense, month by month. Paired rounded bars: income lime,
+ * expense black, the current month hatched — as in the reference.
  */
 export default function BarChart({
   data,
@@ -10,29 +10,29 @@ export default function BarChart({
   current?: string;
 }) {
   const peak = Math.max(1, ...data.flatMap((d) => [d.income, d.expense]));
-  const H = 132;
+  const H = 150;
 
   return (
-    <div className="flex items-end gap-3 sm:gap-5">
+    <div className="flex items-end gap-4 sm:gap-7">
       {data.map((d) => {
         const isNow = d.label === current;
         const ih = Math.round((d.income / peak) * H);
         const eh = Math.round((d.expense / peak) * H);
         return (
-          <div key={d.label} className="flex flex-1 flex-col items-center gap-2">
-            <div className="flex h-[132px] w-full items-end justify-center gap-1">
+          <div key={d.label} className="flex flex-1 flex-col items-center gap-3">
+            <div className="flex h-[150px] w-full items-end justify-center gap-1.5">
               <div
-                className="w-full max-w-[26px] border-2 border-line bg-acid"
-                style={{ height: Math.max(3, ih) }}
+                className="w-full max-w-[26px] rounded-t-[6px] bg-acid"
+                style={{ height: Math.max(4, ih) }}
                 title={`Income ${d.income.toLocaleString("en-PK")}`}
               />
               <div
-                className={"w-full max-w-[26px] border-2 border-line " + (isNow ? "hatch bg-card" : "bg-ink")}
-                style={{ height: Math.max(3, eh) }}
+                className={"w-full max-w-[26px] rounded-t-[6px] " + (isNow ? "hatch bg-page" : "bg-ink")}
+                style={{ height: Math.max(4, eh) }}
                 title={`Spent ${d.expense.toLocaleString("en-PK")}`}
               />
             </div>
-            <span className={"text-[11px] font-bold " + (isNow ? "text-ink" : "text-muted")}>{d.label}</span>
+            <span className={"text-[12px] font-bold " + (isNow ? "text-ink" : "text-muted")}>{d.label}</span>
           </div>
         );
       })}

@@ -128,162 +128,153 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
   const catData = byCategory.map((c) => ({ name: c.name ?? "Uncategorised", value: Number(c.total) }));
 
+
   return (
     <Shell
       wide
       title={household.name}
       action={
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1">
           <Link href={`/?m=${prev}`} aria-label="Previous month"
-            className="flex h-9 w-9 items-center justify-center border-2 border-line bg-card transition-all hover:shadow-hardsm">
-            <ChevronLeft size={17} strokeWidth={2.75} />
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-ink transition hover:bg-page">
+            <ChevronLeft size={18} strokeWidth={2.5} />
           </Link>
-          <span className="whitespace-nowrap px-1 text-[13px] font-bold">{monthLabelShort(m)}</span>
+          <span className="whitespace-nowrap px-2 text-[13px] font-bold">{monthLabelShort(m)}</span>
           <Link href={`/?m=${nextM}`} aria-label="Next month"
-            className="flex h-9 w-9 items-center justify-center border-2 border-line bg-card transition-all hover:shadow-hardsm">
-            <ChevronRight size={17} strokeWidth={2.75} />
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-ink transition hover:bg-page">
+            <ChevronRight size={18} strokeWidth={2.5} />
           </Link>
         </div>
       }
     >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-        {/* left column: hero, alerts, trend, net worth, goals */}
-        <div className="flex flex-col gap-4 lg:w-[58%] lg:shrink-0">
-        {/* ── Hero: the month's spend against budget ───────────────────── */}
-        <section>
-          <div className={"border-2 border-line p-5 lg:p-7 " + (over ? "bg-blush" : "bg-acid")}>
-            <div className="flex items-baseline justify-between">
-              <span className="eyebrow">Spent · {monthLabel(m)}</span>
-              <span className="num text-[12px] font-bold">of {pkr(budget, { compact: true })}</span>
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+        <div className="flex flex-col gap-5 lg:w-[56%] lg:shrink-0 xl:w-[58%]">
+
+          {/* ── Hero zone: the month's spend against budget ──────────────── */}
+          <section className={over ? "zone-blush" : "zone-acid"}>
+            <span className="eyebrow">Spent · {monthLabel(m)}</span>
+            <div className="money-xl mt-4 text-[60px] lg:text-[84px]">{pkr(spend)}</div>
+
+            <div className="mt-7 h-2.5 overflow-hidden rounded-full bg-ink/15">
+              <div className={"h-full rounded-full " + (over ? "hatch" : "bg-ink")} style={{ width: `${pct}%` }} />
             </div>
-            <div className="money-xl mt-3 text-[54px] lg:text-[76px]">{pkr(spend)}</div>
-
-            <div className="mt-5 h-5 border-2 border-line bg-card">
-              <div className={"h-full " + (over ? "hatch" : "bg-ink")} style={{ width: `${pct}%` }} />
+            <div className="mt-3 flex justify-between text-[13px] font-bold">
+              <span>{pct}% of {pkr(budget, { compact: true })} budget</span>
+              <span>
+                {over
+                  ? `Over by ${pkr(spend - budget, { compact: true })}`
+                  : `${pkr(budget - spend, { compact: true })} left`}
+              </span>
             </div>
-            <div className="mt-2 flex justify-between text-[12px] font-bold">
-              <span>{pct}% of budget used</span>
-              <span>{over ? `Over by ${pkr(spend - budget, { compact: true })}` : `${pkr(budget - spend, { compact: true })} left`}</span>
+          </section>
+
+          {/* ── Three-up figures, black zone ─────────────────────────────── */}
+          <section className="zone-ink !py-7">
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                ["Income", pkr(income, { compact: true }), "text-white"],
+                ["Saved", pkr(savings, { compact: true }), "text-white"],
+                [`Incentive ${household.incentivePct}%`, pkr(incentive, { compact: true }), "text-acid"]
+              ].map(([label, value, tone], i) => (
+                <div key={i}>
+                  <div className="eyebrow text-white/45">{label}</div>
+                  <div className={"money mt-2 text-[22px] font-bold lg:text-[26px] " + tone}>{value}</div>
+                </div>
+              ))}
             </div>
-          </div>
+          </section>
 
-          {/* three-up figures, black block */}
-          <div className="grid grid-cols-3 border-2 border-t-0 border-line bg-ink text-card">
-            {[
-              ["Income", pkr(income, { compact: true }), ""],
-              ["Saved", pkr(savings, { compact: true }), ""],
-              [`Incentive ${household.incentivePct}%`, pkr(incentive, { compact: true }), "text-acid"]
-            ].map(([label, value, tone], i) => (
-              <div key={i} className={"px-4 py-3.5 " + (i < 2 ? "border-r-2 border-card/20" : "")}>
-                <div className="eyebrow text-card/55">{label}</div>
-                <div className={"money mt-1 text-[19px] font-bold " + tone}>{value}</div>
-              </div>
-            ))}
-          </div>
-        </section>
+          {/* ── Alerts ───────────────────────────────────────────────────── */}
+          {reviewCount > 0 && (
+            <Link href="/review"
+              className="flex items-center justify-between gap-3 rounded-[18px] bg-blush px-6 py-5 text-[15px] font-bold transition hover:bg-blushdim">
+              <span>{reviewCount} transaction{reviewCount > 1 ? "s" : ""} waiting for review</span>
+              <ArrowRight size={19} strokeWidth={2.5} />
+            </Link>
+          )}
+          {staleDays !== null && staleDays > 90 && (
+            <Link href="/assets"
+              className="flex items-center justify-between gap-3 rounded-[18px] bg-card px-6 py-5 text-[15px] font-bold transition hover:bg-page">
+              <span>Asset values {staleDays} days old — quarterly check due</span>
+              <ArrowRight size={19} strokeWidth={2.5} />
+            </Link>
+          )}
 
-        {/* ── Alerts ───────────────────────────────────────────────────── */}
-        {(reviewCount > 0 || (staleDays !== null && staleDays > 90)) && (
-          <div className="space-y-3">
-            {reviewCount > 0 && (
-              <Link href="/review"
-                className="flex items-center justify-between gap-3 border-2 border-line bg-blush px-4 py-3.5 text-[14px] font-bold transition-all hover:shadow-hard">
-                <span>{reviewCount} transaction{reviewCount > 1 ? "s" : ""} waiting for review</span>
-                <ArrowRight size={18} strokeWidth={2.75} />
-              </Link>
-            )}
-            {staleDays !== null && staleDays > 90 && (
-              <Link href="/assets"
-                className="flex items-center justify-between gap-3 border-2 border-line bg-card px-4 py-3.5 text-[14px] font-bold transition-all hover:shadow-hard">
-                <span>Asset values {staleDays} days old — quarterly check due</span>
-                <ArrowRight size={18} strokeWidth={2.75} />
-              </Link>
-            )}
-          </div>
-        )}
-
-        {/* ── Income vs expense ────────────────────────────────────────── */}
-        <section>
-          <div className="block-card p-5">
-            <div className="mb-4 flex items-center justify-between">
+          {/* ── Income vs spend ──────────────────────────────────────────── */}
+          <section className="zone-card">
+            <div className="mb-6 flex items-center justify-between">
               <h2 className="eyebrow">Income vs spend</h2>
-              <div className="flex items-center gap-3 text-[11px] font-bold">
-                <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 border-2 border-line bg-acid" />In</span>
-                <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 border-2 border-line bg-ink" />Out</span>
+              <div className="flex items-center gap-4 text-[12px] font-bold">
+                <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-acid" />In</span>
+                <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-ink" />Out</span>
               </div>
             </div>
             {trend.length > 1 ? (
               <BarChart data={trend} current={currentLabel} />
             ) : (
-              <p className="py-8 text-center text-sm font-semibold text-muted">
-                One month of data so far — the trend appears once{" "}
-                {monthLabelShort(nextM)} has entries.
+              <p className="py-10 text-center text-[14px] font-semibold text-muted">
+                One month of data so far — the trend appears once {monthLabelShort(nextM)} has entries.
               </p>
             )}
-          </div>
-        </section>
+          </section>
 
-        {/* ── Net worth ────────────────────────────────────────────────── */}
-        <section>
+          {/* ── Net worth ────────────────────────────────────────────────── */}
           <Link href="/assets"
-            className="flex items-center justify-between gap-3 border-2 border-line bg-ink px-5 py-5 text-card transition-all hover:shadow-hard">
-            <span className="eyebrow text-card/55">Net worth</span>
+            className="flex items-center justify-between gap-3 rounded-[22px] bg-ink px-6 py-6 text-white transition hover:bg-ink2 lg:px-8">
+            <span className="eyebrow text-white/45">Net worth</span>
             <span className="flex items-center gap-3">
-              <span className="money text-[26px] font-bold text-acid">{pkr(netWorth, { compact: true })}</span>
-              <ArrowRight size={18} strokeWidth={2.75} />
+              <span className="money text-[28px] font-bold text-acid">{pkr(netWorth, { compact: true })}</span>
+              <ArrowRight size={19} strokeWidth={2.5} />
             </span>
           </Link>
-        </section>
 
-        {/* ── Goals ────────────────────────────────────────────────────── */}
-        {activeGoals.length > 0 && (
-          <section>
-            <h2 className="eyebrow mb-2.5">Goals</h2>
-            <div className="space-y-3">
-              {activeGoals.map((g) => {
-                const saved = goalSums.get(g.id) ?? 0;
-                const gp = Math.min(100, Math.round((saved / Number(g.targetAmount)) * 100));
-                return (
-                  <Link key={g.id} href="/goals" className="block border-2 border-line bg-card p-4 transition-all hover:shadow-hard">
-                    <div className="flex justify-between text-[15px]">
-                      <span className="font-bold">{g.name}</span>
-                      <span className="num font-bold text-muted">
-                        {pkr(saved, { compact: true })} / {pkr(Number(g.targetAmount), { compact: true })}
-                      </span>
-                    </div>
-                    <div className="mt-2.5 h-4 border-2 border-line bg-paper">
-                      <div className="h-full bg-acid" style={{ width: `${gp}%` }} />
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
+          {/* ── Goals ────────────────────────────────────────────────────── */}
+          {activeGoals.length > 0 && (
+            <section className="zone-card">
+              <h2 className="eyebrow mb-5">Goals</h2>
+              <div className="space-y-5">
+                {activeGoals.map((g) => {
+                  const saved = goalSums.get(g.id) ?? 0;
+                  const gp = Math.min(100, Math.round((saved / Number(g.targetAmount)) * 100));
+                  return (
+                    <Link key={g.id} href="/goals" className="block">
+                      <div className="flex justify-between text-[15px]">
+                        <span className="font-bold">{g.name}</span>
+                        <span className="num font-bold text-muted">
+                          {pkr(saved, { compact: true })} / {pkr(Number(g.targetAmount), { compact: true })}
+                        </span>
+                      </div>
+                      <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-page">
+                        <div className="h-full rounded-full bg-acid" style={{ width: `${gp}%` }} />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
         </div>
 
-        {/* right column: category breakdown + per-person split */}
-        <div className="flex flex-col gap-4 lg:min-w-0 lg:flex-1">
-        {/* ── Donut: where it went ─────────────────────────────────────── */}
-        <section>
+        {/* ── Right column: where it went ─────────────────────────────────── */}
+        <div className="flex flex-col gap-5 lg:min-w-0 lg:flex-1">
           {catData.length > 0 ? (
-            <div className="border-2 border-line bg-card">
-              <div className="border-b-2 border-line bg-blush px-5 py-3">
+            <section className="overflow-hidden rounded-[22px] bg-card">
+              <div className="bg-blush px-6 pb-8 pt-6 lg:px-8">
                 <h2 className="eyebrow">Where it went</h2>
+                <div className="mt-5">
+                  <Donut data={catData} total={spend} label="Total spent" />
+                </div>
               </div>
-              <div className="bg-blush px-5 pb-6 pt-2">
-                <Donut data={catData} total={spend} label="Total spent" />
-              </div>
-              <ul>
+
+              <ul className="px-6 py-2 lg:px-8">
                 {byCategory.map((c, i) => {
                   const label = c.name ?? "Uncategorised";
                   const share = spend > 0 ? Math.round((Number(c.total) / spend) * 100) : 0;
                   return (
                     <li key={i}
-                      className={"flex items-center justify-between gap-3 px-5 py-3 text-[15px] " + (i < byCategory.length - 1 ? "rule-row" : "")}>
-                      <span className="flex min-w-0 items-center gap-2.5 font-medium">
-                        <CategoryDot name={label} />
+                      className={"flex items-center justify-between gap-3 py-4 text-[15px] " + (i < byCategory.length - 1 ? "rule-row" : "")}>
+                      <span className="flex min-w-0 items-center gap-3 font-semibold">
+                        <CategoryDot name={label} index={i} />
                         <span className="truncate">{label}</span>
                         <span className="shrink-0 text-[12px] font-bold text-muted">{share}%</span>
                       </span>
@@ -292,44 +283,41 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                   );
                 })}
               </ul>
-              {/* Unlabelled spend swamps the chart until the queue is cleared. */}
+
               {byCategory.some((c) => !c.name) && reviewCount > 0 && (
                 <Link href="/review"
-                  className="flex items-center justify-between gap-3 border-t-2 border-line bg-acid px-5 py-3.5 text-[13px] font-bold transition-all hover:shadow-hard">
+                  className="flex items-center justify-between gap-3 bg-acid px-6 py-4 text-[13px] font-bold transition hover:bg-aciddim lg:px-8">
                   <span>Categorise {reviewCount} entries to sharpen this</span>
-                  <ArrowRight size={16} strokeWidth={2.75} />
+                  <ArrowRight size={17} strokeWidth={2.5} />
                 </Link>
               )}
-            </div>
+            </section>
           ) : (
-            <div className="block-card p-5 text-sm text-muted">No spending recorded this month yet.</div>
+            <section className="zone-card text-[14px] font-semibold text-muted">
+              No spending recorded this month yet.
+            </section>
           )}
-        </section>
 
-        {/* ── By person ────────────────────────────────────────────────── */}
-        {byPerson.some((p) => p.name) && (
-          <section>
-            <div className="block-card">
-              <h2 className="eyebrow border-b-2 border-line px-5 py-3">By person</h2>
+          {byPerson.some((p) => p.name) && (
+            <section className="zone-card">
+              <h2 className="eyebrow mb-3">By person</h2>
               <ul>
                 {byPerson.map((p, i) => (
                   <li key={i}
-                    className={"flex justify-between px-5 py-3 text-[15px] " + (i < byPerson.length - 1 ? "rule-row" : "")}>
-                    <span className="font-medium">{p.name ?? "Household"}</span>
+                    className={"flex justify-between py-4 text-[15px] " + (i < byPerson.length - 1 ? "rule-row" : "")}>
+                    <span className="font-semibold">{p.name ?? "Household"}</span>
                     <span className="num font-bold">{pkr(Number(p.total))}</span>
                   </li>
                 ))}
               </ul>
-            </div>
-          </section>
-        )}
+            </section>
+          )}
 
+          <div className="flex gap-3">
+            <Link href="/import" className="btn-quiet flex-1">Import bank CSV</Link>
+            <Link href="/settings" className="btn-quiet flex-1">Settings</Link>
+          </div>
         </div>
-      </div>
-
-      <div className="mt-4 flex gap-3">
-          <Link href="/import" className="btn-quiet flex-1">Import bank CSV</Link>
-          <Link href="/settings" className="btn-quiet flex-1">Settings</Link>
       </div>
     </Shell>
   );
