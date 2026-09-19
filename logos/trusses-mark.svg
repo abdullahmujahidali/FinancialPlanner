@@ -1,0 +1,34 @@
+<svg viewBox="0 0 512 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="ttl">
+  <title id="ttl">Trusses — an A-frame roof truss, its load shared across the web</title>
+
+  <!--
+    A king-post roof truss drawn as an outline: two rafters, a raised tie beam,
+    and the pair of struts that carry the load out to the walls. It reads as a
+    capital A, and as a roof — triangles are the strongest shape, and no single
+    member holds the roof alone, which is the point of a shared ledger.
+
+    Two offset copies sit behind in the palette's support colours, the way a
+    structural drawing shows the same frame ghosted at different stages. They
+    are thinner and further back than the black frame so they stay a shadow
+    rather than competing with it.
+  -->
+
+  <defs>
+    <g id="truss">
+      <!-- Rafters: the outer A. -->
+      <path d="M256 44 L474 352" />
+      <path d="M256 44 L38 352" />
+      <!-- Tie beam, raised so the A's crossbar sits where the eye expects it. -->
+      <path d="M118 256 H394" />
+      <!-- The two struts: load shared from the apex out to the feet. -->
+      <path d="M256 150 L166 256" />
+      <path d="M256 150 L346 256" />
+    </g>
+  </defs>
+
+  <g fill="none" stroke-linejoin="round" stroke-linecap="round">
+    <use href="#truss" x="-30" y="-16" stroke="#5FBFA0" stroke-width="22" opacity="0.75" />
+    <use href="#truss" x="30" y="16" stroke="#5B9FD6" stroke-width="22" opacity="0.75" />
+    <use href="#truss" stroke="#0E0E0E" stroke-width="30" />
+  </g>
+</svg>

@@ -10,13 +10,12 @@ const sans = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"], v
 const display = Archivo({ subsets: ["latin"], weight: ["600", "700", "800"], variable: "--font-display" });
 
 export const metadata: Metadata = {
-  title: "Hearthbook",
-  description: "The family ledger — expenses, assets, goals.",
+  title: "Trusses",
+  description: "The family financial backbone — expenses, assets, goals.",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "Hearthbook" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Trusses" },
   icons: {
     icon: [
-      { url: "/icons/logo.svg", type: "image/svg+xml" },
       { url: "/icons/icon-32.png", sizes: "32x32", type: "image/png" },
       { url: "/icons/icon-16.png", sizes: "16x16", type: "image/png" }
     ],

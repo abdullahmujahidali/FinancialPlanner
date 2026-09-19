@@ -90,7 +90,7 @@ export default async function MembersSettings({
               </button>
             </div>
             <p className="mt-3 text-[13px] text-muted">
-              An existing Hearthbook account joins straight away. A new email needs a starter
+              An existing Trusses account joins straight away. A new email needs a starter
               password of at least 8 characters, which they can use to sign in.
             </p>
           </form>

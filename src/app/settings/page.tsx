@@ -121,7 +121,7 @@ export default async function SettingsHub() {
         </form>
       </div>
 
-      <p className="eyebrow mt-6 text-center text-muted">Hearthbook v0.1</p>
+      <p className="eyebrow mt-6 text-center text-muted">Trusses v0.1</p>
     </Shell>
   );
 }

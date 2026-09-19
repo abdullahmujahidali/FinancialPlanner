@@ -73,8 +73,8 @@ export default function Sidebar({ household, reviewCount = 0 }: { household: str
       <Link href="/" className="mb-8 block">
         <span className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icons/logo.svg" alt="" width={34} height={34} className="shrink-0 rounded-[10px]" />
-          <span className="font-display text-[19px] font-extrabold tracking-tight text-ink">Hearthbook</span>
+          <img src="/icons/logo-mark.png" alt="" width={36} height={25} className="shrink-0" />
+          <span className="font-display text-[19px] font-extrabold tracking-tight text-ink">Trusses</span>
         </span>
         <span className="mt-2 block truncate text-[12px] font-semibold text-muted">{household}</span>
       </Link>

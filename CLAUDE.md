@@ -1,6 +1,6 @@
-# Hearthbook — family finance ledger (context for Claude Code)
+# Trusses — family finance ledger (context for Claude Code)
 
-Household finance PWA for the Abdullah Family (owner: Abdullah; daily user: Tooba, the
+Household finance PWA (formerly “Hearthbook”) for the Abdullah Family (owner: Abdullah; daily user: Tooba, the
 family's "financial analyst"). Built to replace a Google Sheet. Multi-tenant from day
 one so other families can sign up later and get their own isolated household.
 

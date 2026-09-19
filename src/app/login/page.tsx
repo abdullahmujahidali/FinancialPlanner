@@ -18,19 +18,17 @@ export default async function LoginPage({
         <div className="mb-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/icons/logo.svg"
+            src="/icons/logo-mark.png"
             alt=""
-            width={72}
+            width={104}
             height={72}
-            className="mb-5 rounded-[14px]"
+            className="mb-5"
           />
           <h1 className="font-display text-[46px] font-extrabold leading-[0.95] tracking-[-0.04em]">
-            Hearth
-            <br />
-            book
+            Trusses
           </h1>
           <p className="mt-4 max-w-[30ch] text-[15px] font-semibold">
-            Expenses, assets, goals — the family's one book.
+            A truss shares the load. So should a household's money.
           </p>
         </div>
 
