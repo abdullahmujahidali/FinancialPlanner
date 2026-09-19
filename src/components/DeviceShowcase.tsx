@@ -148,7 +148,7 @@ function Phone({ src, alt }: { src: string; alt: string }) {
     <div className="relative rounded-[26px] bg-ink p-[6px] shadow-soft lg:rounded-[34px] lg:p-[9px]">
       <div className="overflow-hidden rounded-[21px] bg-page lg:rounded-[26px]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={alt} width={1170} height={1992} className="block w-full" />
+        <img src={src} alt={alt} width={1170} height={2532} className="block w-full" />
       </div>
       {/* Dynamic-island style pill. */}
       <div className="absolute left-1/2 top-[12px] h-[13px] w-[44px] -translate-x-1/2 rounded-full bg-ink lg:top-[16px] lg:w-[58px]" />
