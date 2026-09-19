@@ -40,7 +40,7 @@ const SCREENS: Screen[] = [
     label: "Year",
     blurb: "Twelve months side by side, so a bad month is obvious against the rest.",
     desktop: "/shots/app-year.png",
-    mobile: "/shots/mobile-dashboard.png"
+    mobile: "/shots/mobile-year.png"
   },
   {
     id: "goals",
@@ -81,16 +81,11 @@ export default function DeviceShowcase() {
     <div ref={root}>
       {/*
         The phone overlaps the laptop's lower-right corner, the way a product
-        shot stages two devices — it reads as one scene rather than two objects
-        side by side, and costs no extra width. Below `sm` the phone is hidden
-        and the laptop takes the full column.
-      */}
-      {/*
-        The phone overlaps the laptop's lower-right corner, the way a product
-        shot stages two devices. It deliberately overhangs the laptop's base —
-        a phone cropped to the laptop's height reads as a stubby rectangle
-        rather than a phone. The extra bottom padding on the wrapper gives that
-        overhang somewhere to live. Below `sm` the phone is hidden entirely.
+        shot stages two devices — one scene rather than two objects side by
+        side, at no extra width. It deliberately overhangs the laptop's base,
+        because a phone cropped to the laptop's height reads as a stubby
+        rectangle; the wrapper's bottom padding gives the overhang room. Below
+        `sm` the phone is hidden and the laptop takes the full column.
       */}
       <div className="relative mx-auto w-full max-w-[1120px] pb-4 sm:pb-16 sm:pr-[96px] lg:pb-24 lg:pr-[132px]">
         <Laptop src={cur.desktop} alt={`${cur.label} screen on desktop`} />

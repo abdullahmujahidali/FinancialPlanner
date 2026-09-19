@@ -110,10 +110,10 @@ function Hero() {
         <h1 className="mx-auto max-w-[14ch] font-display text-[32px] font-extrabold leading-[0.95] tracking-[-0.04em] sm:text-[48px] sm:leading-[0.92] sm:tracking-[-0.045em] lg:text-[76px] 2xl:text-[92px]">
           Every expense, carried together.
         </h1>
-        <p className="mx-auto mt-5 max-w-[30ch] text-[15px] font-semibold leading-relaxed sm:max-w-[54ch] sm:text-[16px] lg:mt-7 lg:text-[19px]">
-          {BRAND.name} replaces the household spreadsheet. Import your bank statement, agree on
-          what each line actually was, and watch the month's savings add up — together, not in
-          one person's head.
+        <p className="mx-auto mt-5 max-w-[34ch] text-[15px] font-semibold leading-relaxed sm:max-w-[54ch] sm:text-[16px] lg:mt-7 lg:text-[19px]">
+          {BRAND.name} replaces the household spreadsheet. Import your statement, agree on what
+          each line was, and watch the month&rsquo;s savings add up
+          <span className="hidden sm:inline"> — together, not in one person&rsquo;s head</span>.
         </p>
         <div className="mt-7 flex flex-col justify-center gap-2.5 sm:flex-row sm:gap-3 lg:mt-10">
           <Link href="/login?mode=signup" className="btn justify-center">
@@ -182,7 +182,7 @@ function TryIt() {
             next year you can still see what a line actually was.
           </p>
           <p className="mt-4 max-w-[48ch] text-[15px] font-medium leading-relaxed text-muted lg:text-[16px]">
-            Answer the three on the right and watch the queue empty. Teach it once, and the same
+            Answer the three below and watch the queue empty. Teach it once, and the same
             shop files itself every month after.
           </p>
         </div>
