@@ -2,10 +2,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, t } from "@/db/client";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { requireContext } from "@/lib/session";
 import { parseMeezan } from "@/lib/meezan";
 import { classifyRows, type Rule } from "@/lib/rules";
+import { notify } from "@/actions/notifications";
 
 export async function importStatement(formData: FormData) {
   const { user, household } = await requireContext();
@@ -65,6 +66,31 @@ export async function importStatement(formData: FormData) {
     .set(({ importedCount: imported, duplicateCount: dups, ignoredCount: ignored, balanceOk } as any))
     .where(eq(t.importBatches.id, batch.id));
 
-  revalidatePath("/"); revalidatePath("/ledger"); revalidatePath("/review");
+  // Record the import in the household's activity feed.
+  const needsReview = await db()
+    .select({ v: sql<string>`count(*)` })
+    .from(t.transactions)
+    .where(and(eq(t.transactions.householdId, household.id), eq(t.transactions.needsReview, true)));
+  await notify({
+    householdId: household.id,
+    kind: "import",
+    title: `${imported} transaction${imported === 1 ? "" : "s"} imported`,
+    body:
+      `${file.name}${dups ? ` · ${dups} duplicate${dups === 1 ? "" : "s"} skipped` : ""}` +
+      (balanceOk === false ? " · balance tie-out did NOT match" : balanceOk ? " · balance tie-out passed" : ""),
+    href: "/ledger"
+  });
+  const pending = Number(needsReview[0]?.v ?? 0);
+  if (pending > 0) {
+    await notify({
+      householdId: household.id,
+      kind: "review",
+      title: `${pending} transaction${pending === 1 ? "" : "s"} need categorising`,
+      body: "Imported rows that didn't match an existing rule.",
+      href: "/review"
+    });
+  }
+
+  revalidatePath("/", "layout"); revalidatePath("/ledger"); revalidatePath("/review");
   redirect(`/import?done=${batch.id}`);
 }

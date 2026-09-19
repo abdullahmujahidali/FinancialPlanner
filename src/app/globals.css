@@ -107,6 +107,10 @@
 
   .rule-row { @apply border-b border-line; }
 
+  /* Search inputs draw their own clear button; hide WebKit's duplicate. */
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
+
   /* Diagonal hatch — the reference's "current"/over-budget bar treatment. */
   .hatch {
     background-image: repeating-linear-gradient(

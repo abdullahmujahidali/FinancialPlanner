@@ -5,6 +5,7 @@ import { desc, eq, sql } from "drizzle-orm";
 import { addGoal, contributeToGoal, completeGoal } from "@/actions/portfolio";
 import { pkr } from "@/lib/money";
 import { Plus, Check, Target } from "lucide-react";
+import EmptyState from "@/components/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -30,10 +31,11 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
         {/* ── Goal cards ───────────────────────────────────────────────── */}
         <div className="flex flex-col gap-5 lg:w-1/2 lg:shrink-0">
           {goals.length === 0 && (
-            <div className="zone-card flex items-center gap-3 text-[15px] font-semibold text-muted">
-              <Target size={19} strokeWidth={2.5} className="shrink-0" />
-              No goals yet — add one on the right.
-            </div>
+            <EmptyState
+              Icon={Target}
+              title="No goals yet"
+              body="A goal is a savings target — a car, a plot, a trip — that you put money aside for and watch fill up. Use the New goal form to add your first one."
+            />
           )}
 
           {goals.map((g) => {

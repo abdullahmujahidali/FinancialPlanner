@@ -2,8 +2,10 @@ import Nav from "./Nav";
 import Sidebar from "./Sidebar";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { logout } from "@/actions/auth";
+import { markAllRead } from "@/actions/notifications";
+import NotificationBell from "./NotificationBell";
 
 /**
  * App frame. Phones get a bottom tab bar; lg+ gets a fixed sidebar rail and a
@@ -27,10 +29,18 @@ export default async function Shell({
   children: React.ReactNode;
 }) {
   const { household, user } = await requireContext();
-  const [review] = await db()
-    .select({ v: sql<string>`count(*)` })
-    .from(t.transactions)
-    .where(and(eq(t.transactions.householdId, household.id), eq(t.transactions.needsReview, true)));
+  const [[review], notes] = await Promise.all([
+    db()
+      .select({ v: sql<string>`count(*)` })
+      .from(t.transactions)
+      .where(and(eq(t.transactions.householdId, household.id), eq(t.transactions.needsReview, true))),
+    db()
+      .select()
+      .from(t.notifications)
+      .where(eq(t.notifications.householdId, household.id))
+      .orderBy(desc(t.notifications.createdAt))
+      .limit(12)
+  ]);
 
   return (
     <div className="lg:pl-[256px]">
@@ -47,7 +57,10 @@ export default async function Shell({
               {title}
             </h1>
           )}
-          {action}
+          <div className="flex shrink-0 items-center gap-2">
+            {action}
+            <NotificationBell notes={notes} markRead={markAllRead} />
+          </div>
         </header>
         {children}
         <Nav

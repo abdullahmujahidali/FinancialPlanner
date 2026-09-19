@@ -153,3 +153,24 @@ export const importRules = pgTable("import_rules", {
   setAbnormal: boolean("set_abnormal").notNull().default(false),
   priority: integer("priority").notNull().default(100)
 });
+
+// ---------- notifications ----------
+/**
+ * Household-scoped activity feed shown in the header bell.
+ *
+ * Rows are written by whatever produced the event (an import finishing, a
+ * budget being exceeded, a goal reaching its target). `readAt` is per-user so
+ * Abdullah clearing the bell doesn't clear it for Tooba.
+ */
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id),
+  // null = everyone in the household sees it
+  userId: integer("user_id").references(() => users.id),
+  kind: text("kind").notNull(), // import | budget | goal | review | asset
+  title: text("title").notNull(),
+  body: text("body"),
+  href: text("href"),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+});
