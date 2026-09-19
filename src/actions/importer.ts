@@ -5,8 +5,47 @@ import { db, t } from "@/db/client";
 import { and, eq, sql } from "drizzle-orm";
 import { requireContext } from "@/lib/session";
 import { parseMeezan } from "@/lib/meezan";
+import { parseWithMap, sniffCsv, type ColumnMap, type SniffResult } from "@/lib/csv";
 import { classifyRows, type Rule } from "@/lib/rules";
 import { notify } from "@/actions/notifications";
+
+/**
+ * Step 1 of the import flow: look at an uploaded CSV and report where its
+ * header is and which column is probably which, so the browser can show the
+ * mapping form. Parsing lives on the server because the real parser hashes
+ * rows with node:crypto.
+ */
+export async function sniffStatement(text: string): Promise<SniffResult> {
+  await requireContext();
+  return sniffCsv(text);
+}
+
+/** Read the optional `columnMap` field; anything malformed falls back to Meezan. */
+function readColumnMap(raw: FormDataEntryValue | null): ColumnMap | null {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  try {
+    const m = JSON.parse(raw) as Partial<ColumnMap>;
+    if (typeof m.date !== "number" || m.date < 0) return null;
+    if (typeof m.description !== "number" || m.description < 0) return null;
+    const hasMoney =
+      typeof m.debit === "number" || typeof m.credit === "number" || typeof m.amount === "number";
+    if (!hasMoney) return null;
+    return {
+      date: m.date,
+      description: m.description,
+      debit: typeof m.debit === "number" ? m.debit : undefined,
+      credit: typeof m.credit === "number" ? m.credit : undefined,
+      amount: typeof m.amount === "number" ? m.amount : undefined,
+      balance: typeof m.balance === "number" ? m.balance : undefined,
+      docNo: typeof m.docNo === "number" ? m.docNo : undefined,
+      dateFormat:
+        m.dateFormat === "dmy" || m.dateFormat === "mdy" || m.dateFormat === "ymd" ? m.dateFormat : "auto",
+      amountSign: m.amountSign === "debit-positive" ? "debit-positive" : "debit-negative"
+    };
+  } catch {
+    return null;
+  }
+}
 
 export async function importStatement(formData: FormData) {
   const { user, household } = await requireContext();
@@ -15,7 +54,10 @@ export async function importStatement(formData: FormData) {
   if (!file || !accountId) redirect("/import?e=Pick+a+bank+account+and+a+CSV+file");
 
   const text = await file.text();
-  const parsed = parseMeezan(text, household.id, accountId);
+  const map = readColumnMap(formData.get("columnMap"));
+  const parsed = map
+    ? parseWithMap(text, map, household.id, accountId)
+    : parseMeezan(text, household.id, accountId);
   if (!parsed.rows.length) redirect("/import?e=" + encodeURIComponent(parsed.errors[0] || "No rows found in file"));
 
   const ruleRows = await db().select().from(t.importRules).where(eq(t.importRules.householdId, household.id));

@@ -3,9 +3,10 @@ import Link from "next/link";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { and, eq, ne } from "drizzle-orm";
-import { importStatement } from "@/actions/importer";
+import { importStatement, sniffStatement } from "@/actions/importer";
+import CsvMapper from "@/components/CsvMapper";
 import { pkr } from "@/lib/money";
-import { ArrowRight, Upload, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowRight, CheckCircle2, AlertTriangle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -67,30 +68,21 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
       )}
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
-        <div className="flex flex-col gap-5 lg:w-1/2 lg:shrink-0">
+        <div className="flex flex-col gap-5 lg:w-[62%] lg:shrink-0">
           <section className="zone-card">
             <h2 className="eyebrow">Upload</h2>
-            <form action={importStatement} className="mt-6 space-y-5">
-              {accounts.length === 0 && (
-                <p className="rounded-[14px] bg-blush px-4 py-3 text-sm font-bold">
-                  Add a bank account in Settings first.
-                </p>
-              )}
-              <label className="block">
-                <span className="eyebrow text-muted">Bank account this statement belongs to</span>
-                <select name="accountId" className="field mt-2">
-                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
-              </label>
-              <label className="block">
-                <span className="eyebrow text-muted">Statement CSV (Meezan export format)</span>
-                <input name="file" type="file" accept=".csv,text/csv" className="field mt-2 py-2.5" required />
-              </label>
-              <button className="btn w-full">
-                <Upload size={16} strokeWidth={2.75} />
-                Upload and import
-              </button>
-            </form>
+            <p className="mt-4 text-[14px] font-medium leading-relaxed text-muted">
+              A CSV from any bank works — Meezan, Bank Al Habib, Faysal, MCB or anything else. Pick the file and
+              you&apos;ll be asked to confirm which column is the date, the description and the amount before anything
+              is imported.
+            </p>
+            <div className="mt-6">
+              <CsvMapper
+                accounts={accounts.map(a => ({ id: a.id, name: a.name }))}
+                action={importStatement}
+                sniff={sniffStatement}
+              />
+            </div>
           </section>
         </div>
 
