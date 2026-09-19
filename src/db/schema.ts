@@ -1,0 +1,155 @@
+import {
+  pgTable, serial, text, integer, numeric, date, timestamp, boolean, uniqueIndex, index
+} from "drizzle-orm/pg-core";
+
+// ---------- tenancy ----------
+export const households = pgTable("households", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  currency: text("currency").notNull().default("PKR"),
+  monthlyBudget: numeric("monthly_budget", { precision: 14, scale: 2 }).notNull().default("0"),
+  incentivePct: integer("incentive_pct").notNull().default(10),
+  lastRevaluedAt: date("last_revalued_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+});
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+});
+
+export const memberships = pgTable("memberships", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  householdId: integer("household_id").notNull().references(() => households.id),
+  role: text("role").notNull().default("member") // owner | member
+}, (t) => ({ uniq: uniqueIndex("memberships_user_household").on(t.userId, t.householdId) }));
+
+// ---------- reference data (all per-household) ----------
+export const persons = pgTable("persons", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id),
+  name: text("name").notNull()
+});
+
+export const accounts = pgTable("accounts", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id),
+  name: text("name").notNull(),
+  kind: text("kind").notNull().default("bank"), // bank | cash
+  isArchived: boolean("is_archived").notNull().default(false)
+});
+
+export const categories = pgTable("categories", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id),
+  name: text("name").notNull(),
+  passthroughDefault: boolean("passthrough_default").notNull().default(false)
+});
+
+// ---------- ledger ----------
+export const transactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id),
+  accountId: integer("account_id").notNull().references(() => accounts.id),
+  // expense | income | transfer (transfer: money moves accountId -> counterAccountId)
+  type: text("type").notNull(),
+  counterAccountId: integer("counter_account_id").references(() => accounts.id),
+  amount: numeric("amount", { precision: 14, scale: 2 }).notNull(),
+  txDate: date("tx_date").notNull(),
+  description: text("description").notNull().default(""),
+  categoryId: integer("category_id").references(() => categories.id),
+  personId: integer("person_id").references(() => persons.id), // null = whole household
+  isAbnormal: boolean("is_abnormal").notNull().default(false),
+  isPassthrough: boolean("is_passthrough").notNull().default(false),
+  needsReview: boolean("needs_review").notNull().default(false),
+  reviewNote: text("review_note"),
+  source: text("source").notNull().default("manual"), // manual | import
+  importBatchId: integer("import_batch_id"),
+  docNo: text("doc_no"),
+  fingerprint: text("fingerprint"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+}, (t) => ({
+  fpUniq: uniqueIndex("tx_fingerprint_uniq").on(t.householdId, t.fingerprint),
+  byMonth: index("tx_household_date").on(t.householdId, t.txDate)
+}));
+
+export const attachments = pgTable("attachments", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id),
+  transactionId: integer("transaction_id").references(() => transactions.id),
+  assetId: integer("asset_id"),
+  filename: text("filename").notNull(),
+  mime: text("mime").notNull(),
+  size: integer("size").notNull(),
+  data: text("data").notNull() // base64; v1 keeps files in Postgres, R2 later
+});
+
+// ---------- assets & goals ----------
+export const assets = pgTable("assets", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id),
+  name: text("name").notNull(),
+  purchaseDate: date("purchase_date").notNull(),
+  purchasePrice: numeric("purchase_price", { precision: 14, scale: 2 }).notNull(),
+  status: text("status").notNull().default("active"), // active | sold
+  soldDate: date("sold_date"),
+  soldPrice: numeric("sold_price", { precision: 14, scale: 2 }),
+  notes: text("notes")
+});
+
+export const assetValues = pgTable("asset_values", {
+  id: serial("id").primaryKey(),
+  assetId: integer("asset_id").notNull().references(() => assets.id),
+  valuedOn: date("valued_on").notNull(),
+  value: numeric("value", { precision: 14, scale: 2 }).notNull()
+});
+
+export const goals = pgTable("goals", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id),
+  name: text("name").notNull(),
+  targetAmount: numeric("target_amount", { precision: 14, scale: 2 }).notNull(),
+  deadline: date("deadline"),
+  status: text("status").notNull().default("active"), // active | done
+  linkedAssetId: integer("linked_asset_id")
+});
+
+export const goalContributions = pgTable("goal_contributions", {
+  id: serial("id").primaryKey(),
+  goalId: integer("goal_id").notNull().references(() => goals.id),
+  amount: numeric("amount", { precision: 14, scale: 2 }).notNull(),
+  onDate: date("on_date").notNull(),
+  note: text("note")
+});
+
+// ---------- csv import ----------
+export const importBatches = pgTable("import_batches", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id),
+  accountId: integer("account_id").notNull().references(() => accounts.id),
+  filename: text("filename").notNull(),
+  openingBalance: numeric("opening_balance", { precision: 14, scale: 2 }),
+  closingBalance: numeric("closing_balance", { precision: 14, scale: 2 }),
+  rowCount: integer("row_count").notNull().default(0),
+  importedCount: integer("imported_count").notNull().default(0),
+  duplicateCount: integer("duplicate_count").notNull().default(0),
+  ignoredCount: integer("ignored_count").notNull().default(0),
+  balanceOk: boolean("balance_ok"),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+});
+
+export const importRules = pgTable("import_rules", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id),
+  pattern: text("pattern").notNull(), // UPPERCASE substring matched on description
+  setCategoryId: integer("set_category_id").references(() => categories.id),
+  setPersonId: integer("set_person_id").references(() => persons.id),
+  setPassthrough: boolean("set_passthrough").notNull().default(false),
+  setAbnormal: boolean("set_abnormal").notNull().default(false),
+  priority: integer("priority").notNull().default(100)
+});

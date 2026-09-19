@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+html { background: #F7F5EF; }
+body { @apply bg-paper text-ink antialiased; }
+
+.num { font-variant-numeric: tabular-nums; }
+
+.field { @apply w-full rounded border border-line bg-card px-3 py-2.5 text-[15px] outline-none focus:border-brand; }
+.btn { @apply inline-flex items-center justify-center rounded bg-brand px-4 py-2.5 text-[15px] font-medium text-white active:opacity-80; }
+.btn-quiet { @apply inline-flex items-center justify-center rounded border border-line bg-card px-3 py-2 text-sm text-ink active:opacity-70; }
+.chip { @apply rounded-full border border-line bg-card px-3 py-1.5 text-sm; }
+.chip-on { @apply border-brand bg-brandsoft text-brand; }
+.rule-row { @apply border-b border-line; }
+.tag { @apply rounded px-1.5 py-0.5 text-[11px] font-medium; }
