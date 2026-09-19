@@ -5,3 +5,7 @@ node_modules
 
 # scratch scripts
 *.tmp.mjs
+
+tsconfig.tsbuildinfo
+
+.env.backup*

@@ -5,7 +5,7 @@ import BarChart from "@/components/BarChart";
 import Donut from "@/components/Donut";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 
@@ -18,44 +18,70 @@ export default async function Dashboard({ searchParams }: { searchParams: { m?: 
   const H = eq(t.transactions.householdId, household.id);
   const inMonth = and(H, gte(t.transactions.txDate, from), lt(t.transactions.txDate, next));
 
-  const [spendRow] = await db().select({ v: sql<string>`coalesce(sum(${t.transactions.amount}),0)` })
-    .from(t.transactions)
-    .where(and(inMonth, eq(t.transactions.type, "expense"), eq(t.transactions.isPassthrough, false)));
-  const [incomeRow] = await db().select({ v: sql<string>`coalesce(sum(${t.transactions.amount}),0)` })
-    .from(t.transactions).where(and(inMonth, eq(t.transactions.type, "income")));
-  const [reviewRow] = await db().select({ v: sql<string>`count(*)` })
-    .from(t.transactions).where(and(H, eq(t.transactions.needsReview, true)));
-
-  const byCategory = await db().select({
-    name: t.categories.name, total: sql<string>`sum(${t.transactions.amount})`
-  }).from(t.transactions)
-    .leftJoin(t.categories, eq(t.transactions.categoryId, t.categories.id))
-    .where(and(inMonth, eq(t.transactions.type, "expense"), eq(t.transactions.isPassthrough, false)))
-    .groupBy(t.categories.name)
-    .orderBy(desc(sql`sum(${t.transactions.amount})`)).limit(6);
-
-  const byPerson = await db().select({
-    name: t.persons.name, total: sql<string>`sum(${t.transactions.amount})`
-  }).from(t.transactions)
-    .leftJoin(t.persons, eq(t.transactions.personId, t.persons.id))
-    .where(and(inMonth, eq(t.transactions.type, "expense"), eq(t.transactions.isPassthrough, false)))
-    .groupBy(t.persons.name)
-    .orderBy(desc(sql`sum(${t.transactions.amount})`));
-
   // Six-month income/expense trend for the bar chart.
   const trendFrom = (() => {
     const [y, mo] = m.split("-").map(Number);
     const d = new Date(y, mo - 6, 1);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
   })();
-  const trendRows = await db().select({
-    ym: sql<string>`to_char(${t.transactions.txDate}::date, 'YYYY-MM')`,
-    income: sql<string>`coalesce(sum(case when ${t.transactions.type} = 'income' then ${t.transactions.amount} else 0 end), 0)`,
-    expense: sql<string>`coalesce(sum(case when ${t.transactions.type} = 'expense' and not ${t.transactions.isPassthrough} then ${t.transactions.amount} else 0 end), 0)`
-  }).from(t.transactions)
-    .where(and(H, gte(t.transactions.txDate, trendFrom), lt(t.transactions.txDate, next)))
-    .groupBy(sql`to_char(${t.transactions.txDate}::date, 'YYYY-MM')`)
-    .orderBy(sql`to_char(${t.transactions.txDate}::date, 'YYYY-MM')`);
+
+  // Every query below is independent, and the DB is a ~230ms round trip away —
+  // awaiting them in sequence cost seconds per page view. Fire them together.
+  const [
+    [spendRow],
+    [incomeRow],
+    [reviewRow],
+    byCategory,
+    byPerson,
+    trendRows,
+    netWorthRows,
+    activeGoals
+  ] = await Promise.all([
+    db().select({ v: sql<string>`coalesce(sum(${t.transactions.amount}),0)` })
+      .from(t.transactions)
+      .where(and(inMonth, eq(t.transactions.type, "expense"), eq(t.transactions.isPassthrough, false))),
+
+    db().select({ v: sql<string>`coalesce(sum(${t.transactions.amount}),0)` })
+      .from(t.transactions).where(and(inMonth, eq(t.transactions.type, "income"))),
+
+    db().select({ v: sql<string>`count(*)` })
+      .from(t.transactions).where(and(H, eq(t.transactions.needsReview, true))),
+
+    db().select({
+      name: t.categories.name, total: sql<string>`sum(${t.transactions.amount})`
+    }).from(t.transactions)
+      .leftJoin(t.categories, eq(t.transactions.categoryId, t.categories.id))
+      .where(and(inMonth, eq(t.transactions.type, "expense"), eq(t.transactions.isPassthrough, false)))
+      .groupBy(t.categories.name)
+      .orderBy(desc(sql`sum(${t.transactions.amount})`)).limit(6),
+
+    db().select({
+      name: t.persons.name, total: sql<string>`sum(${t.transactions.amount})`
+    }).from(t.transactions)
+      .leftJoin(t.persons, eq(t.transactions.personId, t.persons.id))
+      .where(and(inMonth, eq(t.transactions.type, "expense"), eq(t.transactions.isPassthrough, false)))
+      .groupBy(t.persons.name)
+      .orderBy(desc(sql`sum(${t.transactions.amount})`)),
+
+    db().select({
+      ym: sql<string>`to_char(${t.transactions.txDate}::date, 'YYYY-MM')`,
+      income: sql<string>`coalesce(sum(case when ${t.transactions.type} = 'income' then ${t.transactions.amount} else 0 end), 0)`,
+      expense: sql<string>`coalesce(sum(case when ${t.transactions.type} = 'expense' and not ${t.transactions.isPassthrough} then ${t.transactions.amount} else 0 end), 0)`
+    }).from(t.transactions)
+      .where(and(H, gte(t.transactions.txDate, trendFrom), lt(t.transactions.txDate, next)))
+      .groupBy(sql`to_char(${t.transactions.txDate}::date, 'YYYY-MM')`)
+      .orderBy(sql`to_char(${t.transactions.txDate}::date, 'YYYY-MM')`),
+
+    db().execute(sql`
+      select coalesce(sum(v.value), 0) as total from ${t.assets} a
+      join lateral (
+        select value from ${t.assetValues} av where av.asset_id = a.id order by av.valued_on desc, av.id desc limit 1
+      ) v on true
+      where a.household_id = ${household.id} and a.status = 'active'`),
+
+    db().select().from(t.goals)
+      .where(and(eq(t.goals.householdId, household.id), eq(t.goals.status, "active"))).limit(4)
+  ]);
 
   const trend = trendRows.map((r) => {
     const [yy, mm] = r.ym.split("-").map(Number);
@@ -68,21 +94,18 @@ export default async function Dashboard({ searchParams }: { searchParams: { m?: 
   const currentLabel = new Date(Number(m.split("-")[0]), Number(m.split("-")[1]) - 1, 1)
     .toLocaleDateString("en-PK", { month: "short" });
 
-  const netWorthRows = await db().execute(sql`
-    select coalesce(sum(v.value), 0) as total from ${t.assets} a
-    join lateral (
-      select value from ${t.assetValues} av where av.asset_id = a.id order by av.valued_on desc, av.id desc limit 1
-    ) v on true
-    where a.household_id = ${household.id} and a.status = 'active'`);
   const netWorth = Number((netWorthRows.rows?.[0] as any)?.total ?? 0);
 
-  const activeGoals = await db().select().from(t.goals)
-    .where(and(eq(t.goals.householdId, household.id), eq(t.goals.status, "active"))).limit(4);
+  // One grouped query for every goal's saved total, instead of one per goal.
   const goalSums = new Map<number, number>();
-  for (const g of activeGoals) {
-    const [s] = await db().select({ v: sql<string>`coalesce(sum(${t.goalContributions.amount}),0)` })
-      .from(t.goalContributions).where(eq(t.goalContributions.goalId, g.id));
-    goalSums.set(g.id, Number(s.v));
+  if (activeGoals.length) {
+    const sums = await db().select({
+      goalId: t.goalContributions.goalId,
+      v: sql<string>`coalesce(sum(${t.goalContributions.amount}),0)`
+    }).from(t.goalContributions)
+      .where(inArray(t.goalContributions.goalId, activeGoals.map((g) => g.id)))
+      .groupBy(t.goalContributions.goalId);
+    for (const s of sums) goalSums.set(s.goalId, Number(s.v));
   }
 
   const budget = Number(household.monthlyBudget);
