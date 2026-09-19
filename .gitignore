@@ -9,3 +9,8 @@ node_modules
 tsconfig.tsbuildinfo
 
 .env.backup*
+
+# Real household data dumps — never commit.
+DB_DUMP.SQL
+*.sql
+*.SQL
