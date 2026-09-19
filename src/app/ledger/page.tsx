@@ -3,7 +3,8 @@ import Link from "next/link";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { and, asc, desc, eq, gte, ilike, lt, SQL } from "drizzle-orm";
-import { deleteTransaction } from "@/actions/ledger";
+import { deleteTransaction, askAboutTransaction, answerQuestion } from "@/actions/ledger";
+import QuestionThread from "@/components/QuestionThread";
 import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ConfirmDelete from "@/components/ConfirmDelete";
@@ -65,7 +66,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
 
   // One round trip for all four: the database is ~150ms away, so sequential
   // awaits here would cost half a second of blank page.
-  const [rows, categories, persons, accounts] = await Promise.all([
+  const [rows, categories, persons, accounts, members] = await Promise.all([
     db().select({
       tx: t.transactions, category: t.categories.name, person: t.persons.name, account: t.accounts.name
     }).from(t.transactions)
@@ -80,8 +81,15 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
     db().select({ id: t.persons.id, name: t.persons.name }).from(t.persons)
       .where(eq(t.persons.householdId, household.id)).orderBy(asc(t.persons.name)),
     db().select({ id: t.accounts.id, name: t.accounts.name }).from(t.accounts)
-      .where(eq(t.accounts.householdId, household.id)).orderBy(asc(t.accounts.name))
+      .where(eq(t.accounts.householdId, household.id)).orderBy(asc(t.accounts.name)),
+    db().select({ id: t.users.id, name: t.users.name })
+      .from(t.memberships)
+      .innerJoin(t.users, eq(t.users.id, t.memberships.userId))
+      .where(eq(t.memberships.householdId, household.id))
   ]);
+
+  // Who asked/answered a question, for the thread under each row.
+  const userName = new Map(members.map((mb) => [mb.id, mb.name]));
 
   // What the list actually costs the household: spend only, reimbursed bills out.
   const shownSpend = rows.reduce(
@@ -177,6 +185,17 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                     />
                   </div>
                 </div>
+
+                <QuestionThread
+                  id={tx.id}
+                  question={tx.reviewNote}
+                  answer={tx.reviewAnswer}
+                  askedBy={tx.reviewAskedBy ? userName.get(tx.reviewAskedBy) : null}
+                  answeredBy={tx.reviewAnsweredBy ? userName.get(tx.reviewAnsweredBy) : null}
+                  answeredAt={tx.reviewAnsweredAt}
+                  ask={askAboutTransaction}
+                  answerAction={answerQuestion}
+                />
               </div>
             );
           })}

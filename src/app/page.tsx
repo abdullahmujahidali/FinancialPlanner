@@ -229,9 +229,19 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </Link>
 
           {/* ── Goals ────────────────────────────────────────────────────── */}
-          {activeGoals.length > 0 && (
-            <section className="zone-card">
-              <h2 className="eyebrow mb-5">Goals</h2>
+          <section className="zone-card">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <h2 className="eyebrow">Goals</h2>
+              <Link href="/goals" className="text-[12px] font-bold text-muted transition hover:text-ink">
+                {activeGoals.length > 0 ? "Manage" : "Add a goal"}
+              </Link>
+            </div>
+            {activeGoals.length === 0 ? (
+              <p className="text-[14px] leading-relaxed text-muted">
+                No savings goals yet. Set one — a car, a plot, an emergency fund — and its progress
+                shows here every time you open the app.
+              </p>
+            ) : (
               <div className="space-y-5">
                 {activeGoals.map((g) => {
                   const saved = goalSums.get(g.id) ?? 0;
@@ -251,8 +261,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                   );
                 })}
               </div>
-            </section>
-          )}
+            )}
+          </section>
         </div>
 
         {/* ── Right column: where it went ─────────────────────────────────── */}

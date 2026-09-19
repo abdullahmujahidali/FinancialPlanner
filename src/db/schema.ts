@@ -66,7 +66,12 @@ export const transactions = pgTable("transactions", {
   isAbnormal: boolean("is_abnormal").notNull().default(false),
   isPassthrough: boolean("is_passthrough").notNull().default(false),
   needsReview: boolean("needs_review").notNull().default(false),
+  // Tooba flags a transaction with a question; Abdullah answers it in-app.
   reviewNote: text("review_note"),
+  reviewAskedBy: integer("review_asked_by").references(() => users.id),
+  reviewAnswer: text("review_answer"),
+  reviewAnsweredBy: integer("review_answered_by").references(() => users.id),
+  reviewAnsweredAt: timestamp("review_answered_at"),
   source: text("source").notNull().default("manual"), // manual | import
   importBatchId: integer("import_batch_id"),
   docNo: text("doc_no"),

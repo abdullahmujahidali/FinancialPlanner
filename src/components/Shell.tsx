@@ -4,7 +4,7 @@ import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { logout } from "@/actions/auth";
-import { markAllRead } from "@/actions/notifications";
+import { markAllRead, dismiss } from "@/actions/notifications";
 import NotificationBell from "./NotificationBell";
 
 /**
@@ -59,7 +59,7 @@ export default async function Shell({
           )}
           <div className="flex shrink-0 items-center gap-2">
             {action}
-            <NotificationBell notes={notes} markRead={markAllRead} />
+            <NotificationBell notes={notes} markRead={markAllRead} dismiss={dismiss} />
           </div>
         </header>
         {children}

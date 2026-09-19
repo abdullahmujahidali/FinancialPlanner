@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Bell, Upload, Inbox, Wallet, Target, Building2, Check } from "lucide-react";
+import { Bell, Upload, Inbox, Wallet, Target, Building2, Check, X, ArrowRight } from "lucide-react";
 
 export type Note = {
   id: number;
@@ -42,10 +42,17 @@ function ago(at: Date | string) {
  */
 export default function NotificationBell({
   notes,
-  markRead
+  markRead,
+  dismiss
 }: {
   notes: Note[];
   markRead: () => void;
+  /**
+   * Optional so the server can adopt per-row dismiss without every caller
+   * having to pass it on the same deploy; the button simply doesn't render
+   * until an action arrives.
+   */
+  dismiss?: (fd: FormData) => void;
 }) {
   const [open, setOpen] = useState(false);
   const unread = notes.filter((n) => !n.readAt).length;
@@ -122,24 +129,56 @@ export default function NotificationBell({
                       </span>
                     </span>
                   );
-                  const cls =
-                    "block px-5 py-3.5 transition hover:bg-page " +
-                    (i < notes.length - 1 ? "rule-row " : "") +
-                    (n.readAt ? "" : "bg-acid/5");
                   return (
-                    <li key={n.id}>
+                    <li
+                      key={n.id}
+                      className={
+                        "flex items-start gap-1 px-5 py-3.5 transition hover:bg-page " +
+                        (i < notes.length - 1 ? "rule-row " : "") +
+                        (n.readAt ? "" : "bg-acid/5")
+                      }
+                    >
+                      {/* Link and form stay siblings — a <form> inside an <a> is invalid HTML. */}
                       {n.href ? (
-                        <Link href={n.href} onClick={() => setOpen(false)} className={cls}>
+                        <Link
+                          href={n.href}
+                          onClick={() => setOpen(false)}
+                          className="min-w-0 flex-1"
+                        >
                           {row}
                         </Link>
                       ) : (
-                        <div className={cls}>{row}</div>
+                        <div className="min-w-0 flex-1">{row}</div>
+                      )}
+
+                      {dismiss && (
+                        <form action={dismiss} className="shrink-0 pt-1">
+                          <input type="hidden" name="id" value={n.id} />
+                          <button
+                            aria-label={`Dismiss "${n.title}"`}
+                            title="Dismiss"
+                            className="flex h-7 w-7 items-center justify-center rounded-full text-muted transition hover:bg-page hover:text-ink"
+                          >
+                            <X size={14} strokeWidth={2.4} />
+                          </button>
+                        </form>
                       )}
                     </li>
                   );
                 })}
               </ul>
             )}
+
+            <div className="border-t border-line px-5 py-3">
+              <Link
+                href="/notifications"
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-center gap-1.5 text-[13px] font-bold text-ink transition hover:text-muted"
+              >
+                See all
+                <ArrowRight size={14} strokeWidth={2.4} />
+              </Link>
+            </div>
           </div>
         </>
       )}

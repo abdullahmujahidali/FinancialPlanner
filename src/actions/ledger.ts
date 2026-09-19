@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { db, t } from "@/db/client";
 import { and, eq } from "drizzle-orm";
 import { requireContext } from "@/lib/session";
+import { notify } from "@/actions/notifications";
 
 const MAX_ATTACHMENT = 2 * 1024 * 1024;
 
@@ -81,4 +82,67 @@ export async function resolveReview(formData: FormData) {
     }
   }
   revalidatePath("/review"); revalidatePath("/"); revalidatePath("/ledger");
+}
+
+/**
+ * Ask a question about a transaction.
+ *
+ * Tooba does the day-to-day categorising and often can't tell what a bank row
+ * was for. Flagging it here puts it in the review queue AND notifies the
+ * household, so the question doesn't sit unseen.
+ */
+export async function askAboutTransaction(formData: FormData) {
+  const { household, user } = await requireContext();
+  const id = Number(formData.get("id"));
+  const question = String(formData.get("question") || "").trim();
+  if (!id || !question) return;
+
+  const [tx] = await db()
+    .update(t.transactions)
+    .set(({
+      needsReview: true,
+      reviewNote: question,
+      reviewAskedBy: user.id,
+      reviewAnswer: null,
+      reviewAnsweredBy: null,
+      reviewAnsweredAt: null
+    } as any))
+    .where(and(eq(t.transactions.householdId, household.id), eq(t.transactions.id, id)))
+    .returning();
+
+  if (tx) {
+    await notify({
+      householdId: household.id,
+      kind: "review",
+      title: `${user.name} asked about a transaction`,
+      body: `“${question}” — ${tx.description?.slice(0, 60) || "transaction"}`,
+      href: `/review?focus=${id}`
+    });
+  }
+  revalidatePath("/review"); revalidatePath("/ledger"); revalidatePath("/", "layout");
+}
+
+/** Answer a flagged question. The asker is notified; the flag stays until they resolve it. */
+export async function answerQuestion(formData: FormData) {
+  const { household, user } = await requireContext();
+  const id = Number(formData.get("id"));
+  const answer = String(formData.get("answer") || "").trim();
+  if (!id || !answer) return;
+
+  const [tx] = await db()
+    .update(t.transactions)
+    .set(({ reviewAnswer: answer, reviewAnsweredBy: user.id, reviewAnsweredAt: new Date() } as any))
+    .where(and(eq(t.transactions.householdId, household.id), eq(t.transactions.id, id)))
+    .returning();
+
+  if (tx) {
+    await notify({
+      householdId: household.id,
+      kind: "review",
+      title: `${user.name} answered your question`,
+      body: `“${answer}” — ${tx.description?.slice(0, 60) || "transaction"}`,
+      href: `/review?focus=${id}`
+    });
+  }
+  revalidatePath("/review"); revalidatePath("/ledger"); revalidatePath("/", "layout");
 }

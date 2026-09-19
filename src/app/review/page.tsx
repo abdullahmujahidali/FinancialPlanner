@@ -3,7 +3,8 @@ import EmptyState from "@/components/EmptyState";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { and, asc, eq } from "drizzle-orm";
-import { resolveReview } from "@/actions/ledger";
+import { resolveReview, askAboutTransaction, answerQuestion } from "@/actions/ledger";
+import QuestionThread from "@/components/QuestionThread";
 import { pkr } from "@/lib/money";
 import { Check } from "lucide-react";
 
@@ -11,16 +12,21 @@ export const dynamic = "force-dynamic";
 
 export default async function ReviewPage() {
   const { household } = await requireContext();
-  const [pending, categories, persons, accounts] = await Promise.all([
+  const [pending, categories, persons, accounts, members] = await Promise.all([
     db().select().from(t.transactions)
       .where(and(eq(t.transactions.householdId, household.id), eq(t.transactions.needsReview, true)))
       .orderBy(asc(t.transactions.txDate)).limit(100),
     db().select().from(t.categories).where(eq(t.categories.householdId, household.id)).orderBy(asc(t.categories.name)),
     db().select().from(t.persons).where(eq(t.persons.householdId, household.id)).orderBy(asc(t.persons.id)),
-    db().select().from(t.accounts).where(eq(t.accounts.householdId, household.id))
+    db().select().from(t.accounts).where(eq(t.accounts.householdId, household.id)),
+    db().select({ id: t.users.id, name: t.users.name })
+      .from(t.memberships)
+      .innerJoin(t.users, eq(t.users.id, t.memberships.userId))
+      .where(eq(t.memberships.householdId, household.id))
   ]);
 
   const accountName = new Map(accounts.map((a) => [a.id, a.name]));
+  const userName = new Map(members.map((m) => [m.id, m.name]));
 
   return (
     <Shell
@@ -49,13 +55,11 @@ export default async function ReviewPage() {
       ) : (
         <div className="overflow-hidden rounded-[22px] bg-card">
           {pending.map((tx, i) => (
-            <form
+            <div
               key={tx.id}
-              action={resolveReview}
-              className={
-                "min-w-0 px-5 py-5 lg:px-7 " + (i < pending.length - 1 ? "rule-row" : "")
-              }
+              className={"min-w-0 px-5 py-5 lg:px-7 " + (i < pending.length - 1 ? "rule-row" : "")}
             >
+            <form action={resolveReview} className="min-w-0">
               <input type="hidden" name="id" value={tx.id} />
 
               {/* Line 1 — what it is, and how much. */}
@@ -68,7 +72,6 @@ export default async function ReviewPage() {
                     <span className="num">{tx.txDate}</span>
                     {" · "}
                     {accountName.get(tx.accountId) ?? "Unknown account"}
-                    {tx.reviewNote ? ` · ${tx.reviewNote}` : ""}
                   </div>
                 </div>
                 <span
@@ -120,6 +123,19 @@ export default async function ReviewPage() {
                 <button className="btn btn-sm ml-auto shrink-0">Save</button>
               </div>
             </form>
+
+            {/* Sibling of the form above — HTML forbids nesting forms. */}
+            <QuestionThread
+              id={tx.id}
+              question={tx.reviewNote}
+              answer={tx.reviewAnswer}
+              askedBy={tx.reviewAskedBy ? userName.get(tx.reviewAskedBy) : null}
+              answeredBy={tx.reviewAnsweredBy ? userName.get(tx.reviewAnsweredBy) : null}
+              answeredAt={tx.reviewAnsweredAt}
+              ask={askAboutTransaction}
+              answerAction={answerQuestion}
+            />
+            </div>
           ))}
         </div>
       )}
