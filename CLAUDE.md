@@ -34,19 +34,30 @@ statement opening/closing. **Verified against a real Sep-2026 statement: 58/58 r
 tie-out exact.**
 
 ## State
-- Code complete + `next build` green. NOT yet deployed; no database provisioned.
+- Code complete + `next build` green. NOT yet deployed to Vercel.
+- Database EXISTS — do not create another one. Neon project `family-finance`
+  (id `young-mud-84022016`, org's Neon account, pg 18, us-east-1). Schema pushed,
+  household seeded, and the real Sep-2026 Meezan statement already imported
+  (56 txns, balance tie-out passed). Get DATABASE_URL from console.neon.tech →
+  family-finance → Connect (or the Neon MCP get_connection_string). The seed
+  script is idempotent (exits if owner exists) — safe but unnecessary to re-run.
+- Login: abdullah@example.com / hearth2026 · tooba@example.com / hearth2026.
+  No password-change UI yet (roadmap).
 - Attachments stored base64 in Postgres, 2 MB cap (move to Cloudflare R2 later).
 - Seed script (`scripts/seed.mts`) creates the Mujahid household, 5 accounts (Meezan,
   Bank Al Habib, Faysal, MCB, Cash wallet), 12 categories, 4 people, 10 mined import
   rules. Does NOT seed assets/goals — Abdullah adds real figures in-app.
 
 ## Next steps (in order)
-1. Create Neon project (free tier) → `.env` with DATABASE_URL + SESSION_SECRET.
-2. `npm install && npm run db:push`
-3. `SEED_OWNER_EMAIL=... SEED_OWNER_PASSWORD=... SEED_MEMBER_EMAIL=... SEED_MEMBER_PASSWORD=... npm run seed`
-4. Deploy to Vercel (env vars: DATABASE_URL, SESSION_SECRET). Add to Home Screen = PWA.
-5. In-app: add Corolla + LDA plot assets, car goal. Tooba starts October 2026.
+1. `.env`: DATABASE_URL (existing Neon project above) + SESSION_SECRET (any long
+   random string — no live sessions exist yet, so free choice).
+2. `npm install && npm run dev` to verify locally.
+3. Deploy to Vercel (`vercel` CLI or dashboard import of the GitHub repo);
+   set DATABASE_URL + SESSION_SECRET env vars. Add to Home Screen = PWA.
+4. In-app: change both passwords is NOT possible yet — build a password-change
+   form in Settings early. Then add Corolla + LDA plot assets and the car goal
+   with real figures. Tooba starts October 2026.
 
 ## Roadmap (agreed, not started)
-R2 attachments · more bank CSV parsers (format picker on /import) · password reset /
+R2 attachments · more bank CSV parsers (format picker on /import) · password change + reset /
 magic links before inviting outside families · optional bank balances in net worth.
