@@ -137,24 +137,45 @@ async function main() {
     pass?: boolean;
   };
   const template: Row[] = [
-    { d: 2, desc: "Whole Foods Market", amt: 182.4, cat: "Groceries & food" },
-    { d: 4, desc: "City Power & Light", amt: 138.5, cat: "Utilities", pass: true },
-    { d: 5, desc: "Shell station", amt: 64.2, cat: "Transport", person: "Marco" },
-    { d: 6, desc: "Riverside Pharmacy", amt: 38.9, cat: "Health", person: "Sofia" },
-    { d: 8, desc: "Trader Joe's", amt: 121.75, cat: "Groceries & food" },
-    { d: 9, desc: "Fiber internet", amt: 79.0, cat: "Mobile & internet" },
-    { d: 11, desc: "Oakridge Elementary — tuition", amt: 420.0, cat: "Kids' education", person: "Leo" },
-    { d: 12, desc: "Corner Bistro", amt: 86.3, cat: "Eating out" },
-    { d: 14, desc: "Metro transit pass", amt: 58.0, cat: "Transport", person: "Ana" },
-    { d: 15, desc: "Costco run", amt: 246.1, cat: "Groceries & food" },
+    // Housing and the fixed bills a family actually carries.
+    { d: 1, desc: "Mortgage payment", amt: 1685.0, cat: "Home & repairs" },
+    { d: 4, desc: "City Power & Light", amt: 168.5, cat: "Utilities", pass: true },
+    { d: 5, desc: "Natural gas", amt: 74.2, cat: "Utilities", pass: true },
     { d: 17, desc: "Water & sewer", amt: 61.4, cat: "Utilities", pass: true },
-    { d: 18, desc: "Dr. Alvarez — checkup", amt: 95.0, cat: "Health", person: "Leo" },
-    { d: 20, desc: "Hardware store — faucet", amt: 112.8, cat: "Home & repairs" },
-    { d: 22, desc: "Mobile plan — family", amt: 96.0, cat: "Mobile & internet" },
+    { d: 9, desc: "Fiber internet", amt: 79.0, cat: "Mobile & internet" },
+    { d: 22, desc: "Mobile plan — family", amt: 148.0, cat: "Mobile & internet" },
+    { d: 7, desc: "Home insurance", amt: 132.0, cat: "Home & repairs" },
+
+    // Groceries — the biggest variable line, spread across the month.
+    { d: 2, desc: "Whole Foods Market", amt: 182.4, cat: "Groceries & food" },
+    { d: 8, desc: "Trader Joe's", amt: 121.75, cat: "Groceries & food" },
+    { d: 15, desc: "Costco run", amt: 246.1, cat: "Groceries & food" },
     { d: 23, desc: "Safeway", amt: 134.55, cat: "Groceries & food" },
-    { d: 25, desc: "Kids' shoes", amt: 78.9, cat: "Clothing", person: "Sofia" },
-    { d: 26, desc: "Pizza night", amt: 43.2, cat: "Eating out" },
+    { d: 29, desc: "Farmers market", amt: 68.3, cat: "Groceries & food" },
+
+    // Kids.
+    { d: 11, desc: "Oakridge Elementary — tuition", amt: 620.0, cat: "Kids' education", person: "Leo" },
+    { d: 13, desc: "Piano lessons", amt: 160.0, cat: "Kids' education", person: "Sofia" },
+    { d: 19, desc: "After-school club", amt: 145.0, cat: "Kids' education", person: "Leo" },
+
+    // Getting around.
+    { d: 5, desc: "Shell station", amt: 64.2, cat: "Transport", person: "Marco" },
+    { d: 14, desc: "Metro transit pass", amt: 58.0, cat: "Transport", person: "Ana" },
     { d: 27, desc: "Gas station", amt: 59.7, cat: "Transport", person: "Marco" },
+    { d: 21, desc: "Car insurance", amt: 142.0, cat: "Transport" },
+
+    // Health.
+    { d: 6, desc: "Riverside Pharmacy", amt: 38.9, cat: "Health", person: "Sofia" },
+    { d: 18, desc: "Dr. Alvarez — checkup", amt: 95.0, cat: "Health", person: "Leo" },
+    { d: 24, desc: "Dental cleaning", amt: 128.0, cat: "Health", person: "Ana" },
+
+    // The rest of life.
+    { d: 12, desc: "Corner Bistro", amt: 86.3, cat: "Eating out" },
+    { d: 26, desc: "Pizza night", amt: 43.2, cat: "Eating out" },
+    { d: 16, desc: "Sunday brunch", amt: 72.4, cat: "Eating out" },
+    { d: 20, desc: "Hardware store — faucet", amt: 112.8, cat: "Home & repairs" },
+    { d: 25, desc: "Kids' shoes", amt: 78.9, cat: "Clothing", person: "Sofia" },
+    { d: 10, desc: "Winter jackets", amt: 164.0, cat: "Clothing" },
     { d: 28, desc: "Account maintenance fee", amt: 6.0, cat: "Fees & charges" }
   ];
 
