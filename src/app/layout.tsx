@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Instrument_Sans } from "next/font/google";
+import { Archivo, Inter } from "next/font/google";
 import "./globals.css";
 import SWRegister from "@/components/SWRegister";
 
-const sans = Instrument_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-sans" });
-const display = Fraunces({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-display" });
+// Archivo carries the oversized figures; Inter handles everything small.
+const sans = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-sans" });
+const display = Archivo({ subsets: ["latin"], weight: ["600", "700", "800"], variable: "--font-display" });
 
 export const metadata: Metadata = {
   title: "Hearthbook",
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Hearthbook" }
 };
 export const viewport: Viewport = {
-  themeColor: "#0B3B2A",
+  themeColor: "#E2FB4F",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover"

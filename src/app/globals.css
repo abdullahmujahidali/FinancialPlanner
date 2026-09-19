@@ -3,16 +3,63 @@
 @tailwind utilities;
 
 :root { color-scheme: light; }
-html { background: #F4F0E6; }
+html { background: #F2F2F0; }
 body { @apply bg-paper text-ink antialiased; }
 
+/* Numerals: tabular everywhere so columns line up; tight tracking for the big ones. */
 .num { font-variant-numeric: tabular-nums; }
-.money { @apply font-display num tracking-tight; }
+.money { @apply font-display num tracking-[-0.03em]; }
+/* The hero figure — oversized, tight, unapologetic. */
+.money-xl { @apply money font-bold leading-[0.88] tracking-[-0.045em]; }
 
-.field { @apply w-full rounded-xl border border-line bg-card px-3.5 py-3 text-[15px] outline-none transition-colors focus:border-brand; }
-.btn { @apply inline-flex items-center justify-center rounded-full bg-brand px-5 py-3 text-[15px] font-medium text-white transition-opacity active:opacity-80; }
-.btn-quiet { @apply inline-flex items-center justify-center rounded-full border border-line bg-card px-4 py-2.5 text-sm font-medium text-ink transition-opacity active:opacity-70; }
-.chip { @apply rounded-full border border-line bg-card px-3 py-1.5 text-sm; }
-.panel { @apply rounded-2xl border border-line bg-card; }
-.rule-row { @apply border-b border-line/70; }
-.tag { @apply rounded-full px-2 py-0.5 text-[11px] font-medium; }
+/* --- Blocks ------------------------------------------------------------- */
+/* Flat panel with a hard black rule. The base unit of the whole UI. */
+.block-card { @apply border-2 border-line bg-card; }
+.block-lift { @apply border-2 border-line bg-card; box-shadow: 4px 4px 0 0 #0A0A0A; }
+
+/* --- Controls ----------------------------------------------------------- */
+.field {
+  @apply border-2 border-line bg-card px-3.5 py-3 text-[15px] outline-none
+         transition-shadow placeholder:text-muted;
+  width: 100%;
+  min-width: 0;      /* let flex shrink it instead of overflowing the card */
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.field:focus { box-shadow: 2px 2px 0 0 #0A0A0A; }
+.btn {
+  @apply inline-flex items-center justify-center gap-2 border-2 border-line bg-acid px-5 py-3
+         text-[15px] font-bold text-ink transition-all
+         active:translate-x-[2px] active:translate-y-[2px];
+}
+.btn:hover { box-shadow: 4px 4px 0 0 #0A0A0A; }
+.btn:active { box-shadow: none; }
+.btn-dark { @apply btn bg-ink text-acid; }
+.btn-quiet { @apply btn bg-card; }
+.btn-sm { @apply px-3.5 py-2 text-sm; }
+
+.chip { @apply border-2 border-line bg-card px-3 py-1.5 text-sm font-medium; }
+.chip-on { @apply chip bg-ink text-acid; }
+
+/* Segmented toggle (Week / Month), mirroring the reference's pill group. */
+.seg { @apply inline-flex border-2 border-line bg-card p-0.5; }
+.seg-item { @apply px-4 py-1.5 text-sm font-semibold text-ink transition-colors; }
+.seg-item-on { @apply bg-ink text-acid; }
+
+.tag { @apply border-2 border-line px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide; }
+.rule-row { @apply border-b-2 border-line; }
+
+/* Label above a figure: small, spaced, quiet. */
+.eyebrow { @apply text-[11px] font-bold uppercase tracking-[0.12em]; }
+
+/* Diagonal hatch — the reference uses it for the "current"/over-budget bar. */
+.hatch {
+  background-image: repeating-linear-gradient(
+    45deg, #0A0A0A 0 6px, transparent 6px 12px
+  );
+}
+
+/* Keep focus visible against flat blocks without a glow. */
+:where(a, button, input, select, textarea):focus-visible {
+  @apply outline-none ring-2 ring-ink ring-offset-2 ring-offset-paper;
+}

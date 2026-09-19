@@ -5,6 +5,7 @@ import { db, t } from "@/db/client";
 import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { deleteTransaction } from "@/actions/ledger";
 import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
+import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -30,47 +31,73 @@ export default async function LedgerPage({ searchParams }: { searchParams: { m?:
   let lastDate = "";
   return (
     <Shell title="Ledger" action={
-      <div className="flex shrink-0 items-center gap-1 text-sm">
-        <Link href={`/ledger?m=${prev}`} className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-card">‹</Link>
-        <span className="whitespace-nowrap text-muted">{monthLabelShort(m)}</span>
-        <Link href={`/ledger?m=${nextM}`} className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-card">›</Link>
+      <div className="flex shrink-0 items-center gap-1.5">
+        <Link href={`/ledger?m=${prev}`} aria-label="Previous month"
+          className="flex h-9 w-9 items-center justify-center border-2 border-line bg-card transition-all hover:shadow-hardsm">
+          <ChevronLeft size={17} strokeWidth={2.75} />
+        </Link>
+        <span className="whitespace-nowrap px-1 text-[13px] font-bold">{monthLabelShort(m)}</span>
+        <Link href={`/ledger?m=${nextM}`} aria-label="Next month"
+          className="flex h-9 w-9 items-center justify-center border-2 border-line bg-card transition-all hover:shadow-hardsm">
+          <ChevronRight size={17} strokeWidth={2.75} />
+        </Link>
       </div>
     }>
-      {rows.length === 0 && <p className="text-muted">No entries this month yet. Add one from the + tab, or import a bank CSV.</p>}
-      <div className="panel overflow-hidden">
-        {rows.map(({ tx, category, person, account }, i) => {
-          const showDate = tx.txDate !== lastDate;
-          lastDate = tx.txDate;
-          return (
-            <div key={tx.id} className={i < rows.length - 1 ? "rule-row" : ""}>
-              {showDate && <div className="bg-paper/70 px-4 py-1.5 text-[11px] font-medium uppercase-none text-muted">{new Date(tx.txDate).toLocaleDateString("en-PK", { weekday: "short", day: "numeric", month: "short" })}</div>}
-              <div className="flex items-start justify-between gap-3 px-4 py-2.5">
-                <div className="min-w-0">
-                  <div className="truncate text-[15px]">{tx.description || category || tx.type}</div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-                    <span>{account}</span>
-                    {category && <span>· {category}</span>}
-                    {person && <span>· {person}</span>}
-                    {tx.isPassthrough && <span className="tag bg-brandsoft text-brand">pass-through</span>}
-                    {tx.isAbnormal && <span className="tag bg-flagsoft text-flag">one-off</span>}
-                    {tx.needsReview && <span className="tag bg-flagsoft text-flag">review</span>}
-                    {tx.type === "transfer" && <span className="tag bg-paper text-muted">transfer</span>}
+      {rows.length === 0 ? (
+        <div className="block-card p-6">
+          <h2 className="eyebrow">{monthLabel(m)}</h2>
+          <p className="mt-2 text-[15px] font-semibold text-muted">
+            No entries this month yet. Add one from the + tab, or import a bank CSV.
+          </p>
+          <Link href="/import" className="btn btn-sm mt-4">Import bank CSV</Link>
+        </div>
+      ) : (
+        <div className="block-card">
+          <div className="flex items-baseline justify-between border-b-2 border-line bg-acid px-4 py-3 lg:px-5">
+            <h2 className="eyebrow">{monthLabel(m)}</h2>
+            <span className="num text-[12px] font-bold">{rows.length} entries</span>
+          </div>
+          {rows.map(({ tx, category, person, account }, i) => {
+            const showDate = tx.txDate !== lastDate;
+            lastDate = tx.txDate;
+            return (
+              <div key={tx.id} className={i < rows.length - 1 ? "rule-row" : ""}>
+                {showDate && (
+                  <div className="eyebrow border-b-2 border-line bg-paper px-4 py-2 text-muted lg:px-5">
+                    {new Date(tx.txDate).toLocaleDateString("en-PK", { weekday: "short", day: "numeric", month: "short" })}
+                  </div>
+                )}
+                <div className="flex items-start justify-between gap-3 px-4 py-3 lg:px-5">
+                  <div className="min-w-0">
+                    <div className="truncate text-[15px] font-semibold">{tx.description || category || tx.type}</div>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[12px] font-medium text-muted">
+                      <span>{account}</span>
+                      {category && <span>· {category}</span>}
+                      {person && <span>· {person}</span>}
+                      {tx.isPassthrough && <span className="tag bg-acid text-ink">pass-through</span>}
+                      {tx.isAbnormal && <span className="tag bg-blush text-ink">one-off</span>}
+                      {tx.needsReview && <span className="tag bg-blush text-ink">review</span>}
+                      {tx.type === "transfer" && <span className="tag bg-paper text-ink">transfer</span>}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className={"num text-[15px] font-bold " + (tx.type === "income" ? "text-good" : "")}>
+                      {tx.type === "income" ? "+" : ""}{pkr(Number(tx.amount))}
+                    </span>
+                    <form action={deleteTransaction}>
+                      <input type="hidden" name="id" value={tx.id} />
+                      <button aria-label="Delete entry"
+                        className="flex h-8 w-8 items-center justify-center border-2 border-line bg-card text-muted transition-all hover:bg-blush hover:text-ink hover:shadow-hardsm">
+                        <Trash2 size={14} strokeWidth={2.5} />
+                      </button>
+                    </form>
                   </div>
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className={"num text-[15px] font-semibold " + (tx.type === "income" ? "text-brand" : "")}>
-                    {tx.type === "income" ? "+" : ""}{pkr(Number(tx.amount))}
-                  </span>
-                  <form action={deleteTransaction}>
-                    <input type="hidden" name="id" value={tx.id} />
-                    <button className="text-xs text-muted underline">delete</button>
-                  </form>
-                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </Shell>
   );
 }
