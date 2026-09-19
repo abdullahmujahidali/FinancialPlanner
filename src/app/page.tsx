@@ -259,7 +259,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <div className="flex flex-col gap-5 lg:min-w-0 lg:flex-1">
           {catData.length > 0 ? (
             <section className="overflow-hidden rounded-[22px] bg-card">
-              <div className="bg-blush px-6 pb-8 pt-6 lg:px-8">
+              <div className="bg-card px-6 pb-8 pt-6 lg:px-8">
                 <h2 className="eyebrow">Where it went</h2>
                 <div className="mt-5">
                   <Donut data={catData} total={spend} label="Total spent" />

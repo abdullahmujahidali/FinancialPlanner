@@ -1,16 +1,60 @@
-/** PKR formatting the way the household thinks: lakh and crore. */
+/**
+ * Money formatting.
+ *
+ * South-Asian currencies are written the way the household thinks — lakh and
+ * crore — while everything else uses standard thousands grouping. The locale
+ * follows the currency so separators and digit grouping match.
+ */
+type Money = { symbol: string; locale: string; lakh: boolean };
+
+const CURRENCIES: Record<string, Money> = {
+  PKR: { symbol: "Rs", locale: "en-PK", lakh: true },
+  INR: { symbol: "₹", locale: "en-IN", lakh: true },
+  USD: { symbol: "$", locale: "en-US", lakh: false },
+  EUR: { symbol: "€", locale: "en-IE", lakh: false },
+  GBP: { symbol: "£", locale: "en-GB", lakh: false },
+  AED: { symbol: "AED", locale: "en-AE", lakh: false },
+  SAR: { symbol: "SAR", locale: "en-SA", lakh: false },
+  CAD: { symbol: "C$", locale: "en-CA", lakh: false },
+  AUD: { symbol: "A$", locale: "en-AU", lakh: false }
+};
+
+export const CURRENCY_CODES = Object.keys(CURRENCIES);
+
+/** PKR is the default: this started as one Pakistani household's ledger. */
+let current: Money = CURRENCIES.PKR;
+
+/**
+ * Point the formatters at a household's currency. Called once per request from
+ * the layout, before anything renders.
+ */
+export function setCurrency(code?: string | null) {
+  current = CURRENCIES[String(code || "PKR").toUpperCase()] ?? CURRENCIES.PKR;
+}
+
+export function currencySymbol(code?: string | null) {
+  return (CURRENCIES[String(code || "PKR").toUpperCase()] ?? CURRENCIES.PKR).symbol;
+}
+
 export function pkr(n: number | string, opts: { compact?: boolean } = {}) {
   const v = typeof n === "string" ? Number(n) : n;
   if (!isFinite(v)) return "—";
   const sign = v < 0 ? "−" : "";
   const a = Math.abs(v);
+
   if (opts.compact) {
-    if (a >= 1e7) return `${sign}${trim(a / 1e7)} Cr`;
-    if (a >= 1e5) return `${sign}${trim(a / 1e5)} L`;
+    if (current.lakh) {
+      if (a >= 1e7) return `${sign}${trim(a / 1e7)} Cr`;
+      if (a >= 1e5) return `${sign}${trim(a / 1e5)} L`;
+    } else {
+      if (a >= 1e9) return `${sign}${trim(a / 1e9)}B`;
+      if (a >= 1e6) return `${sign}${trim(a / 1e6)}M`;
+    }
     if (a >= 1e3) return `${sign}${trim(a / 1e3)}k`;
   }
-  return sign + new Intl.NumberFormat("en-PK", { maximumFractionDigits: 0 }).format(a);
+  return sign + new Intl.NumberFormat(current.locale, { maximumFractionDigits: 0 }).format(a);
 }
+
 const trim = (x: number) => (Math.round(x * 100) / 100).toString();
 
 export function monthKey(d = new Date()) {
@@ -24,11 +68,11 @@ export function monthRange(m: string) {
 }
 export function monthLabel(m: string) {
   const [y, mo] = m.split("-").map(Number);
-  return new Date(y, mo - 1, 1).toLocaleDateString("en-PK", { month: "long", year: "numeric" });
+  return new Date(y, mo - 1, 1).toLocaleDateString(current.locale, { month: "long", year: "numeric" });
 }
 export function monthLabelShort(m: string) {
   const [y, mo] = m.split("-").map(Number);
-  return new Date(y, mo - 1, 1).toLocaleDateString("en-PK", { month: "short", year: "numeric" });
+  return new Date(y, mo - 1, 1).toLocaleDateString(current.locale, { month: "short", year: "numeric" });
 }
 export function todayStr() {
   return new Date().toISOString().slice(0, 10);
