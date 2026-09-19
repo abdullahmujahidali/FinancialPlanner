@@ -22,10 +22,10 @@ const url = process.env.DATABASE_URL;
 if (!url) { console.error("Set DATABASE_URL first."); process.exit(1); }
 const db = drizzle(neon(url), { schema: t });
 
-const OWNER_EMAIL = process.env.SEED_OWNER_EMAIL || "abdullah@example.com";
-const OWNER_PASS = process.env.SEED_OWNER_PASSWORD || "change-me-8chars";
-const MEMBER_EMAIL = process.env.SEED_MEMBER_EMAIL || "tooba@example.com";
-const MEMBER_PASS = process.env.SEED_MEMBER_PASSWORD || "change-me-8chars";
+const OWNER_EMAIL = process.env.SEED_OWNER_EMAIL || "abdullahmujahidali1@gmail.com";
+const OWNER_PASS = process.env.SEED_OWNER_PASSWORD || "testpass123";
+const MEMBER_EMAIL = process.env.SEED_MEMBER_EMAIL || "toobashahzad06@gmail.com";
+const MEMBER_PASS = process.env.SEED_MEMBER_PASSWORD || "testpass123";
 
 async function main() {
   const existing = await db.select().from(t.users).where(eq(t.users.email, OWNER_EMAIL)).limit(1);

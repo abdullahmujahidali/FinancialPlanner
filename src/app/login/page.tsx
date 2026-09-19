@@ -8,13 +8,24 @@ export default async function LoginPage({ searchParams }: { searchParams: { e?: 
   if (await currentUserId()) redirect("/");
   const signupMode = searchParams.mode === "signup";
   return (
-    <main className="flex min-h-screen flex-col bg-forest px-6 pb-10 pt-[max(4rem,env(safe-area-inset-top))] text-cream">
-      <div className="mx-auto w-full max-w-sm flex-1">
-        <p className="font-display text-[40px] font-semibold leading-tight tracking-tight">Hearthbook</p>
-        <p className="mt-2 text-[15px] text-cream/60">Expenses, assets, goals — the family's one book.</p>
+    <main className="min-h-screen bg-acid">
+      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-5 py-12">
+        <div className="mb-7">
+          <h1 className="font-display text-[46px] font-extrabold leading-[0.95] tracking-[-0.04em]">
+            Hearth<br />book
+          </h1>
+          <p className="mt-3 max-w-[30ch] text-[15px] font-semibold">
+            Expenses, assets, goals — the family's one book.
+          </p>
+        </div>
 
-        <div className="mt-10 rounded-3xl bg-card p-5 text-ink shadow-[0_20px_50px_rgba(0,0,0,0.35)]">
-          {searchParams.e && <p className="mb-4 rounded-xl bg-oversoft px-3 py-2.5 text-sm text-over">{searchParams.e}</p>}
+        <div className="border-2 border-line bg-card p-5 shadow-hardlg">
+          <h2 className="eyebrow mb-4">{signupMode ? "Create household" : "Sign in"}</h2>
+
+          {searchParams.e && (
+            <p className="mb-4 border-2 border-line bg-blush px-3 py-2.5 text-sm font-bold">{searchParams.e}</p>
+          )}
+
           <form action={signupMode ? signup : login} className="space-y-3">
             {signupMode && <input name="name" placeholder="Your name" className="field" required />}
             <input name="email" type="email" placeholder="Email" className="field" required />
@@ -23,7 +34,11 @@ export default async function LoginPage({ searchParams }: { searchParams: { e?: 
             <button className="btn w-full">{signupMode ? "Create household" : "Sign in"}</button>
           </form>
         </div>
-        <a href={signupMode ? "/login" : "/login?mode=signup"} className="mt-6 block text-center text-sm text-cream/70 underline underline-offset-4">
+
+        <a
+          href={signupMode ? "/login" : "/login?mode=signup"}
+          className="mt-6 block text-center text-sm font-bold underline decoration-2 underline-offset-4"
+        >
           {signupMode ? "Already have an account? Sign in" : "New here? Create your household"}
         </a>
       </div>

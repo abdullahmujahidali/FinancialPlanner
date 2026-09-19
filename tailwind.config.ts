@@ -1,28 +1,41 @@
 import type { Config } from "tailwindcss";
+
+/**
+ * Neo-brutalist palette: acid lime, true black, paper white.
+ * Flat blocks, hard 2px borders, no soft shadows — contrast does the work.
+ */
 const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        paper: "#F4F0E6",
-        card: "#FDFBF5",
-        ink: "#20261F",
-        muted: "#78715F",
-        line: "#E4DECC",
-        forest: "#0B3B2A",
-        forest2: "#0F4A35",
-        cream: "#F6F1E1",
-        gold: "#C7A14A",
-        brand: "#0E6E4C",
-        brandsoft: "#E4EFE7",
-        flag: "#9A6700",
-        flagsoft: "#F8EFD9",
-        over: "#B3402A",
-        oversoft: "#F7E4DE"
+        acid: "#E2FB4F",
+        aciddim: "#C9E23F",
+        ink: "#0A0A0A",
+        ink2: "#161616",
+        paper: "#F2F2F0",
+        card: "#FFFFFF",
+        line: "#0A0A0A",
+        muted: "#6B6B6B",
+        blush: "#E98D7C",
+        blushdim: "#D97A68",
+        good: "#1F7A4D",
+        over: "#C43C22"
       },
       fontFamily: {
-        display: ["var(--font-display)", "serif"],
-        sans: ["var(--font-sans)", "sans-serif"]
+        display: ["var(--font-display)", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"]
+      },
+      borderRadius: {
+        block: "0px",
+        soft: "14px",
+        pill: "999px"
+      },
+      boxShadow: {
+        // hard offset shadow — the brutalist "lift"
+        hard: "4px 4px 0 0 #0A0A0A",
+        hardsm: "2px 2px 0 0 #0A0A0A",
+        hardlg: "6px 6px 0 0 #0A0A0A"
       }
     }
   },
