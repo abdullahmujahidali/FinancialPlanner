@@ -35,22 +35,27 @@ tie-out exact.**
 
 ## State
 - Code complete + `next build` green. NOT yet deployed to Vercel.
-- Database EXISTS — do not create another one. Neon project `family-finance`
-  (id `young-mud-84022016`, org's Neon account, pg 18, us-east-1). Schema pushed,
-  household seeded, and the real Sep-2026 Meezan statement already imported
-  (56 txns, balance tie-out passed). Get DATABASE_URL from console.neon.tech →
-  family-finance → Connect (or the Neon MCP get_connection_string). The seed
-  script is idempotent (exits if owner exists) — safe but unnecessary to re-run.
-- Login: abdullah@example.com / hearth2026 · tooba@example.com / hearth2026.
-  No password-change UI yet (roadmap).
+- Database EXISTS — do not create another one. Neon project `family-finance-sg`
+  (id `aged-frog-35109366`, pg 18, **ap-southeast-1 / Singapore**). Schema +
+  data were migrated here from the old us-east-1 project `family-finance`
+  (`young-mud-84022016`) on 2026-09-19 via pg_dump/psql; row counts and the
+  expense total were verified identical. The old project still exists as a
+  fallback but is NOT used — delete it once you're confident.
+  Singapore is ~154ms from PK vs ~245ms for us-east-1, and `vercel.json` pins
+  functions to `sin1` so the prod server→DB hop is same-region.
+  Get DATABASE_URL from console.neon.tech → family-finance-sg → Connect (or the
+  Neon MCP get_connection_string). The seed script is idempotent (exits if owner
+  exists) — safe but unnecessary to re-run.
+- Login: abdullahmujahidali1@gmail.com / testpass123 ·
+  toobashahzad06@gmail.com / testpass123. No password-change UI yet (roadmap).
 - Attachments stored base64 in Postgres, 2 MB cap (move to Cloudflare R2 later).
 - Seed script (`scripts/seed.mts`) creates the Mujahid household, 5 accounts (Meezan,
   Bank Al Habib, Faysal, MCB, Cash wallet), 12 categories, 4 people, 10 mined import
   rules. Does NOT seed assets/goals — Abdullah adds real figures in-app.
 
 ## Next steps (in order)
-1. `.env`: DATABASE_URL (existing Neon project above) + SESSION_SECRET (any long
-   random string — no live sessions exist yet, so free choice).
+1. `.env` is already written (Singapore DATABASE_URL + SESSION_SECRET) and is
+   gitignored, as is `.env.backup-us-east-1` (the old us-east-1 URL).
 2. `npm install && npm run dev` to verify locally.
 3. Deploy to Vercel (`vercel` CLI or dashboard import of the GitHub repo);
    set DATABASE_URL + SESSION_SECRET env vars. Add to Home Screen = PWA.
