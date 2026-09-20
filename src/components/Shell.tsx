@@ -52,7 +52,7 @@ export default async function Shell({
       <Sidebar household={household.name} reviewCount={Number(review.v)} />
       <div
         className={
-          "mx-auto min-h-screen px-4 pb-40 pt-[max(1.25rem,env(safe-area-inset-top))] lg:px-12 lg:pb-16 lg:pt-10 " +
+          "mx-auto min-h-[100dvh] px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] lg:px-12 lg:pb-16 lg:pt-10 " +
           (wide ? "max-w-lg lg:max-w-none xl:max-w-[1500px]" : "max-w-lg lg:max-w-3xl")
         }
       >

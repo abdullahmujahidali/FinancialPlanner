@@ -23,7 +23,9 @@ export default async function ReviewPage() {
     db().select().from(t.transactions)
       .where(and(eq(t.transactions.householdId, household.id), eq(t.transactions.needsReview, true)))
       .orderBy(asc(t.transactions.txDate)).limit(100),
-    db().select().from(t.categories).where(eq(t.categories.householdId, household.id)).orderBy(asc(t.categories.name)),
+    db().select().from(t.categories)
+      .where(and(eq(t.categories.householdId, household.id), eq(t.categories.isArchived, false)))
+      .orderBy(asc(t.categories.name)),
     db().select().from(t.persons).where(eq(t.persons.householdId, household.id)).orderBy(asc(t.persons.id)),
     db().select().from(t.accounts).where(eq(t.accounts.householdId, household.id)),
     db().select({ id: t.users.id, name: t.users.name })

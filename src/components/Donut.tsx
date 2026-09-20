@@ -50,7 +50,7 @@ export default function Donut({
   const shown = active !== null ? segments[active] : null;
 
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-[280px]">
+    <div className="relative mx-auto aspect-square w-full max-w-[280px] [container-type:inline-size]">
       <svg viewBox="0 0 240 240" className="h-full w-full -rotate-90">
         {segments.map((s, i) => {
           const isActive = active === i;
@@ -77,11 +77,11 @@ export default function Donut({
         })}
       </svg>
 
-      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-[22%] text-center">
         {shown ? (
           <>
             <span className="eyebrow line-clamp-2 text-ink/60">{shown.name}</span>
-            <span className="money-xl mt-1.5 text-[30px]">{pkr(shown.value, { compact: true })}</span>
+            <span className="money-xl mt-1.5 text-[clamp(15px,7cqw,26px)] leading-tight">{pkr(shown.value, { compact: true })}</span>
             <span className="mt-1 text-[12px] font-bold text-ink/55">
               {Math.round(shown.frac * 100)}% of spend
             </span>
@@ -89,7 +89,7 @@ export default function Donut({
         ) : (
           <>
             <span className="eyebrow text-ink/50">{label}</span>
-            <span className="money-xl mt-1.5 text-[32px]">{pkr(total, { compact: true })}</span>
+            <span className="money-xl mt-1.5 text-[clamp(16px,7.5cqw,28px)] leading-tight">{pkr(total, { compact: true })}</span>
           </>
         )}
       </div>

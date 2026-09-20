@@ -7,9 +7,11 @@ import { deleteTransaction } from "@/actions/ledger";
 import { addComment, deleteComment, toggleReaction } from "@/actions/comments";
 import CommentThread, { groupThreads } from "@/components/CommentThread";
 import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
-import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal, Pencil, Plus } from "lucide-react";
 import ConfirmDelete from "@/components/ConfirmDelete";
 import LedgerFilters from "@/components/LedgerFilters";
+import ViewToggle from "@/components/ViewToggle";
+import LedgerTable from "@/components/LedgerTable";
 import SavedToast from "@/components/SavedToast";
 import { Suspense } from "react";
 
@@ -25,6 +27,11 @@ type Params = {
   acct?: string;
   type?: string;
   flag?: string;
+  /** Layout density: the card list, or the compact table. */
+  view?: string;
+  /** Table sort column and direction; sorting happens in SQL. */
+  sort?: string;
+  dir?: string;
 };
 
 /** Only whole numbers are real ids; anything else is a stale or hand-typed URL. */
@@ -45,6 +52,25 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
   const acct = idOf(sp.acct);
   const type = ["expense", "income", "transfer"].includes(sp.type || "") ? sp.type! : null;
   const flag = ["review", "passthrough", "abnormal"].includes(sp.flag || "") ? sp.flag! : null;
+  const view: "list" | "table" = sp.view === "table" ? "table" : "list";
+
+  /**
+   * Sorting runs in Postgres rather than the browser so it covers every row
+   * the filters matched, not just what happens to be rendered. Date descending
+   * is the ledger's natural order and stays the default.
+   */
+  const SORTS = {
+    date: t.transactions.txDate,
+    description: t.transactions.description,
+    amount: t.transactions.amount
+  } as const;
+  const sortKey = (Object.keys(SORTS) as Array<keyof typeof SORTS>).includes(
+    sp.sort as keyof typeof SORTS
+  )
+    ? (sp.sort as keyof typeof SORTS)
+    : "date";
+  const dir: "asc" | "desc" = sp.dir === "asc" ? "asc" : "desc";
+  const orderFn = dir === "asc" ? asc : desc;
 
   /**
    * A search is a question about the household, not about a month — restricting
@@ -79,7 +105,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
       .leftJoin(t.persons, eq(t.transactions.personId, t.persons.id))
       .leftJoin(t.accounts, eq(t.transactions.accountId, t.accounts.id))
       .where(and(...conds))
-      .orderBy(desc(t.transactions.txDate), desc(t.transactions.id))
+      .orderBy(orderFn(SORTS[sortKey]), desc(t.transactions.id))
       .limit(400),
     db().select({ id: t.categories.id, name: t.categories.name }).from(t.categories)
       .where(eq(t.categories.householdId, household.id)).orderBy(asc(t.categories.name)),
@@ -138,8 +164,17 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
 
   let lastDate = "";
   return (
-    <Shell title="Ledger" action={
-      <div className="flex shrink-0 items-center gap-1">
+    // The table earns the full width; the card list reads better narrow.
+    <Shell wide={view === "table"} title="Ledger" action={
+      <div className="flex shrink-0 items-center gap-2">
+        {/* Adding an entry is the most common reason to open the ledger and
+            not already have a row; the sidebar button is off-screen on a
+            phone, so it also lives here. */}
+        <Link href="/entry" className="btn btn-sm gap-1.5" aria-label="Add entry">
+          <Plus size={15} strokeWidth={2.6} />
+          <span className="hidden sm:inline">Add entry</span>
+        </Link>
+        <ViewToggle view={view} />
         <Link href={`/ledger?m=${prev}`} aria-label="Previous month"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-ink transition hover:bg-page">
           <ChevronLeft size={18} strokeWidth={2.5} />
@@ -186,7 +221,16 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
               {rows.length} {rows.length === 1 ? "entry" : "entries"} · {pkr(shownSpend)} spent
             </span>
           </div>
-          {rows.map(({ tx, category, person, account }, i) => {
+          {view === "table" ? (
+            <LedgerTable
+              rows={rows}
+              showYear={searching}
+              sort={sortKey}
+              dir={dir}
+              query={sp}
+            />
+          ) : (
+          rows.map(({ tx, category, person, account }, i) => {
             const showDate = tx.txDate !== lastDate;
             lastDate = tx.txDate;
             return (
@@ -231,7 +275,16 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                       >
                         <MoreHorizontal size={16} strokeWidth={2.4} />
                       </summary>
-                      <div className="absolute right-0 z-10 mt-1 rounded-full bg-card p-0.5 shadow-soft">
+                      {/* Edit and delete are siblings here: a <form> (inside
+                          ConfirmDelete) must never sit inside an <a>. */}
+                      <div className="absolute right-0 z-10 mt-1 flex items-center rounded-full bg-card p-0.5 shadow-soft">
+                        <Link
+                          href={`/ledger/${tx.id}`}
+                          aria-label={`Edit ${tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense")}`}
+                          className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition hover:bg-page hover:text-ink"
+                        >
+                          <Pencil size={15} strokeWidth={2.2} />
+                        </Link>
                         <ConfirmDelete
                           id={tx.id}
                           label={tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense")}
@@ -239,6 +292,14 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                         />
                       </div>
                     </details>
+
+                    <Link
+                      href={`/ledger/${tx.id}`}
+                      aria-label={`Edit ${tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense")}`}
+                      className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-page hover:text-ink sm:flex"
+                    >
+                      <Pencil size={15} strokeWidth={2.2} />
+                    </Link>
 
                     <span className="hidden sm:block">
                       <ConfirmDelete
@@ -270,7 +331,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                 )}
               </div>
             );
-          })}
+          }))}
         </div>
       )}
     </Shell>

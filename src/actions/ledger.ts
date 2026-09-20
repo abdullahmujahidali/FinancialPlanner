@@ -56,6 +56,55 @@ export async function addTransaction(formData: FormData) {
 }
 
 /**
+ * Correct an existing transaction.
+ *
+ * Without this, fixing a mistyped amount or a wrong category means delete and
+ * re-add — which throws away the row's comments and its import-batch link.
+ * Open to any household member, exactly like add and delete.
+ */
+export async function updateTransaction(formData: FormData) {
+  const { household } = await requireContext();
+  const id = Number(formData.get("id"));
+  if (!Number.isInteger(id) || id <= 0) return;
+
+  const type = String(formData.get("type") || "expense");
+  const amount = Number(formData.get("amount") || 0);
+  if (!amount || amount <= 0) redirect(`/ledger/${id}?e=Enter+an+amount`);
+  const accountId = Number(formData.get("accountId"));
+  if (!Number.isInteger(accountId) || accountId <= 0) redirect(`/ledger/${id}?e=Pick+an+account`);
+  const counter = formData.get("counterAccountId");
+  const categoryId = formData.get("categoryId") ? Number(formData.get("categoryId")) : null;
+  const personId = formData.get("personId") ? Number(formData.get("personId")) : null;
+
+  const [tx] = await db().update(t.transactions).set(({
+    type,
+    amount: amount.toFixed(2),
+    txDate: String(formData.get("txDate") || new Date().toISOString().slice(0, 10)),
+    description: String(formData.get("description") || "").trim(),
+    categoryId: type === "expense" ? categoryId : null,
+    personId,
+    accountId,
+    counterAccountId: type === "transfer" && counter ? Number(counter) : null,
+    isAbnormal: formData.get("isAbnormal") === "on",
+    isPassthrough: formData.get("isPassthrough") === "on",
+    needsReview: formData.get("needsReview") === "on"
+  } as any))
+    .where(and(eq(t.transactions.householdId, household.id), eq(t.transactions.id, id)))
+    .returning();
+
+  if (!tx) redirect("/ledger");
+
+  await saveAttachment(household.id, formData.get("receipt") as File | null, { transactionId: tx.id });
+  revalidatePath("/"); revalidatePath("/ledger"); revalidatePath("/review"); revalidatePath("/year");
+
+  const saved = new URLSearchParams({
+    saved: String(tx.amount),
+    m: tx.txDate.slice(0, 7)
+  });
+  redirect(`/ledger?${saved.toString()}`);
+}
+
+/**
  * Create a category from the entry form.
  *
  * Without this you have to abandon a half-typed entry, go to Settings, add the

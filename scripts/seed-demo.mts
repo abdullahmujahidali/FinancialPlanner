@@ -143,7 +143,7 @@ async function main() {
     { d: 5, desc: "Natural gas", amt: 74.2, cat: "Utilities", pass: true },
     { d: 17, desc: "Water & sewer", amt: 61.4, cat: "Utilities", pass: true },
     { d: 9, desc: "Fiber internet", amt: 79.0, cat: "Mobile & internet" },
-    { d: 22, desc: "Mobile plan — family", amt: 148.0, cat: "Mobile & internet" },
+    { d: 22, desc: "Mobile plan — family", amt: 96.0, cat: "Mobile & internet" },
     { d: 7, desc: "Home insurance", amt: 132.0, cat: "Home & repairs" },
 
     // Groceries — the biggest variable line, spread across the month.
@@ -182,21 +182,57 @@ async function main() {
   const tx: Array<typeof t.transactions.$inferInsert> = [];
   for (let back = MONTHS - 1; back >= 0; back--) {
     const m = monthsBack(back);
-    // Gentle month-to-month variation, plus a seasonal bump in the middle.
-    const wobble = 1 + (((back * 37) % 11) - 5) / 100;
-    const bump = back === 2 ? 1.18 : 1;
+    /**
+     * Per-row variation rather than one multiplier for the whole month. A
+     * uniform wobble moves every category by exactly the same percentage,
+     * which reads as obviously synthetic and leaves the Insights page nothing
+     * true to find. Seeded off the row so runs stay reproducible.
+     */
+    const noise = (seed: string) => {
+      let x = 7;
+      for (const ch of seed) x = (x * 31 + ch.charCodeAt(0)) % 9973;
+      return 1 + ((x % 21) - 10) / 100; // ±10%
+    };
 
     for (const r of template) {
+      let amt = r.amt * noise(`${r.desc}|${back}`);
+
+      // Three deliberate stories for Insights to surface:
+      // a subscription that quietly rose three months ago and stayed up,
+      if (r.desc === "Mobile plan — family") amt = back <= 2 ? 148 : 96;
+      // a one-off spike in the current month,
+      if (r.cat === "Groceries & food" && back === 0) amt *= 1.34;
+      // and a category climbing steadily for three months.
+      if (r.cat === "Kids' education" && back <= 2) amt *= 1 + (2 - back) * 0.16;
+
       tx.push({
         householdId: hh.id,
         accountId: acc(r.acct ?? "Main checking"),
         type: "expense",
         txDate: day(m, r.d),
-        amount: (r.amt * wobble * bump).toFixed(2),
+        amount: amt.toFixed(2),
         description: r.desc,
         categoryId: cat(r.cat),
         personId: r.person ? who(r.person) : null,
         isPassthrough: !!r.pass,
+        source: "import"
+      });
+    }
+
+    // An accidental double-charge this month, for the duplicate check. The
+    // amount must match the original row exactly, so it is recomputed with the
+    // same seed rather than hard-coded.
+    if (back === 0) {
+      const bistro = template.find((r) => r.desc === "Corner Bistro")!;
+      const dupAmt = (bistro.amt * noise(`${bistro.desc}|${back}`)).toFixed(2);
+      tx.push({
+        householdId: hh.id,
+        accountId: acc("Main checking"),
+        type: "expense",
+        txDate: day(m, bistro.d),
+        amount: dupAmt,
+        description: "Corner Bistro",
+        categoryId: cat("Eating out"),
         source: "import"
       });
     }

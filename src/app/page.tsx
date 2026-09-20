@@ -57,11 +57,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       .orderBy(desc(sql`sum(${t.transactions.amount})`)).limit(6),
 
     db().select({
-      name: t.persons.name, total: sql<string>`sum(${t.transactions.amount})`
+      id: t.persons.id, name: t.persons.name, total: sql<string>`sum(${t.transactions.amount})`
     }).from(t.transactions)
       .leftJoin(t.persons, eq(t.transactions.personId, t.persons.id))
       .where(and(inMonth, eq(t.transactions.type, "expense"), eq(t.transactions.isPassthrough, false)))
-      .groupBy(t.persons.name)
+      .groupBy(t.persons.id, t.persons.name)
       .orderBy(desc(sql`sum(${t.transactions.amount})`)),
 
     db().select({
@@ -334,15 +334,36 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
           {byPerson.some((p) => p.name) && (
             <section className="zone-card">
-              <h2 className="eyebrow mb-3">By person</h2>
+              <h2 className="eyebrow">By person</h2>
+              {/* Someone with only reimbursed spending shows nothing here, which
+                  looks like a bug unless we say why. */}
+              <p className="mb-3 mt-2 text-[13px] leading-relaxed text-muted">
+                Spending tagged to each person. Reimbursed bills are left out, so a
+                person only appears once something was actually paid for them.
+              </p>
               <ul>
-                {byPerson.map((p, i) => (
-                  <li key={i}
-                    className={"flex justify-between py-4 text-[15px] " + (i < byPerson.length - 1 ? "rule-row" : "")}>
-                    <span className="font-semibold">{p.name ?? "Household"}</span>
-                    <span className="num font-bold">{pkr(Number(p.total))}</span>
-                  </li>
-                ))}
+                {byPerson.map((p, i) => {
+                  const row = (
+                    <>
+                      <span className="font-semibold">{p.name ?? "Household"}</span>
+                      <span className="num font-bold">{pkr(Number(p.total))}</span>
+                    </>
+                  );
+                  const cls =
+                    "flex items-center justify-between gap-3 py-4 text-[15px] " +
+                    (i < byPerson.length - 1 ? "rule-row " : "");
+                  return (
+                    <li key={i}>
+                      {p.id ? (
+                        <Link href={`/people/${p.id}?m=${m}`} className={cls + "-mx-2 rounded-[12px] px-2 transition hover:bg-page"}>
+                          {row}
+                        </Link>
+                      ) : (
+                        <div className={cls}>{row}</div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           )}

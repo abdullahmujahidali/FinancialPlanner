@@ -56,7 +56,7 @@ export default function Nav({
   };
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-card pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
       <div className="mx-auto flex max-w-lg items-end justify-between px-3">
         {tabs.map((t) => tab(t.href, t.label, t.Icon))}
 

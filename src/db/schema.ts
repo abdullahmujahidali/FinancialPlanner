@@ -47,7 +47,13 @@ export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
   householdId: integer("household_id").notNull().references(() => households.id),
   name: text("name").notNull(),
-  passthroughDefault: boolean("passthrough_default").notNull().default(false)
+  passthroughDefault: boolean("passthrough_default").notNull().default(false),
+  /**
+   * Categories are never deleted once transactions point at them — archiving
+   * hides one from the pickers while its history stays readable. Mirrors
+   * `accounts.isArchived`.
+   */
+  isArchived: boolean("is_archived").notNull().default(false)
 });
 
 // ---------- ledger ----------

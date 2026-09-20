@@ -44,6 +44,67 @@ export async function addCategory(formData: FormData) {
   revalidatePath("/settings", "layout");
 }
 
+/**
+ * Renaming is always safe: transactions point at the id, so the history
+ * follows the new name rather than splitting.
+ */
+export async function renameCategory(formData: FormData) {
+  const { household } = await requireContext();
+  const name = String(formData.get("name") || "").trim();
+  const id = Number(formData.get("id"));
+  if (!name || !id) return;
+  await db().update(t.categories)
+    .set({ name, passthroughDefault: formData.get("passthroughDefault") === "on" })
+    .where(and(eq(t.categories.householdId, household.id), eq(t.categories.id, id)));
+  revalidatePath("/settings", "layout");
+  revalidatePath("/ledger");
+}
+
+/**
+ * Archiving hides a category from the pickers without touching the rows that
+ * already use it — deleting one that has history would orphan those amounts.
+ */
+export async function setCategoryArchived(formData: FormData) {
+  const { household } = await requireContext();
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  await db().update(t.categories)
+    .set({ isArchived: formData.get("archived") === "1" })
+    .where(and(eq(t.categories.householdId, household.id), eq(t.categories.id, id)));
+  revalidatePath("/settings", "layout");
+}
+
+export async function renamePerson(formData: FormData) {
+  const { household } = await requireContext();
+  const name = String(formData.get("name") || "").trim();
+  const id = Number(formData.get("id"));
+  if (!name || !id) return;
+  await db().update(t.persons).set({ name })
+    .where(and(eq(t.persons.householdId, household.id), eq(t.persons.id, id)));
+  revalidatePath("/settings", "layout");
+}
+
+export async function renameAccount(formData: FormData) {
+  const { household } = await requireContext();
+  const name = String(formData.get("name") || "").trim();
+  const id = Number(formData.get("id"));
+  if (!name || !id) return;
+  await db().update(t.accounts).set({ name })
+    .where(and(eq(t.accounts.householdId, household.id), eq(t.accounts.id, id)));
+  revalidatePath("/settings", "layout");
+}
+
+/** Un-archive, so a hidden account can come back. */
+export async function setAccountArchived(formData: FormData) {
+  const { household } = await requireContext();
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  await db().update(t.accounts)
+    .set(({ isArchived: formData.get("archived") === "1" } as any))
+    .where(and(eq(t.accounts.householdId, household.id), eq(t.accounts.id, id)));
+  revalidatePath("/settings", "layout");
+}
+
 export async function addPerson(formData: FormData) {
   const { household } = await requireContext();
   const name = String(formData.get("name") || "").trim();

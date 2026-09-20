@@ -105,10 +105,24 @@ export default async function YearOverview({
     : null;
 
   const monthlyBudget = Number(household.monthlyBudget);
-  const budget = monthlyBudget * 12;
   const spend = Number(spendRow.v);
   const income = Number(incomeRow.v);
-  const savings = Math.max(0, budget - spend);
+
+  // Only budget for months that have actually happened. Charging the full
+  // twelve months in September claimed ~37 lakh of "savings" from months that
+  // had not been lived through yet, which made the incentive fiction too.
+  const now2 = new Date();
+  const elapsed = year < now2.getFullYear()
+    ? 12
+    : year > now2.getFullYear()
+      ? 0
+      : now2.getMonth() + 1;
+  const budget = monthlyBudget * elapsed;
+  const partial = elapsed > 0 && elapsed < 12;
+
+  // Savings is money that actually came in and did not go out — not budget
+  // headroom. Budget headroom is shown separately by the progress bar.
+  const savings = Math.max(0, income - spend);
   const incentive = Math.round((savings * household.incentivePct) / 100);
   const pct = budget > 0 ? Math.min(100, Math.round((spend / budget) * 100)) : 0;
   const over = budget > 0 && spend > budget;
@@ -151,7 +165,10 @@ export default async function YearOverview({
               <div className={"h-full rounded-full " + (over ? "hatch" : "bg-ink")} style={{ width: `${pct}%` }} />
             </div>
             <div className="mt-3 flex justify-between text-[13px] font-bold">
-              <span>{pct}% of {pkr(budget, { compact: true })} yearly budget</span>
+              <span>
+                {pct}% of {pkr(budget, { compact: true })}
+                {partial ? ` budget so far (${elapsed} ${elapsed === 1 ? "month" : "months"})` : " yearly budget"}
+              </span>
               <span>
                 {over
                   ? `Over by ${pkr(spend - budget, { compact: true })}`
@@ -164,13 +181,19 @@ export default async function YearOverview({
           <section className="zone-ink !py-7">
             <div className="grid grid-cols-3 gap-4">
               {[
-                ["Income", pkr(income, { compact: true }), "text-white"],
-                ["Saved", pkr(savings, { compact: true }), "text-white"],
-                [`Incentive ${household.incentivePct}%`, pkr(incentive, { compact: true }), "text-acid"]
-              ].map(([label, value, tone], i) => (
+                ["Income", pkr(income, { compact: true }), "text-white", "everything that came in"],
+                ["Saved", pkr(savings, { compact: true }), "text-white", "income minus spend"],
+                [
+                  `Incentive ${household.incentivePct}%`,
+                  pkr(incentive, { compact: true }),
+                  "text-acid",
+                  savings > 0 ? `${household.incentivePct}% of what's saved` : "nothing saved yet"
+                ]
+              ].map(([label, value, tone, hint], i) => (
                 <div key={i}>
                   <div className="eyebrow text-white/45">{label}</div>
                   <div className={"money mt-2 text-[22px] font-bold lg:text-[26px] " + tone}>{value}</div>
+                  <div className="mt-1 text-[11px] font-semibold leading-tight text-white/40">{hint}</div>
                 </div>
               ))}
             </div>

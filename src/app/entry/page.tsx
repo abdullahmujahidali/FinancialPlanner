@@ -14,7 +14,9 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
   const { household } = await requireContext();
   const [accounts, categories, persons] = await Promise.all([
     db().select().from(t.accounts).where(and(eq(t.accounts.householdId, household.id), eq(t.accounts.isArchived, false))).orderBy(asc(t.accounts.id)),
-    db().select().from(t.categories).where(eq(t.categories.householdId, household.id)).orderBy(asc(t.categories.name)),
+    db().select().from(t.categories)
+      .where(and(eq(t.categories.householdId, household.id), eq(t.categories.isArchived, false)))
+      .orderBy(asc(t.categories.name)),
     db().select().from(t.persons).where(eq(t.persons.householdId, household.id)).orderBy(asc(t.persons.id))
   ]);
 
