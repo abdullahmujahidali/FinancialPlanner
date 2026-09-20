@@ -52,24 +52,31 @@ export default async function HouseholdSettings() {
           </label>
 
           <label className="block">
-            <span className="eyebrow text-muted">
-              Incentive %{!owner && <span className="ml-2 font-bold text-muted">owner sets this</span>}
-            </span>
-            <input
-              name="incentivePct"
-              type="number"
-              inputMode="numeric"
-              step="1"
-              min="0"
-              max="100"
-              defaultValue={household.incentivePct}
-              disabled={!owner}
-              className="field num mt-2 disabled:text-muted"
-            />
+            <span className="eyebrow text-muted">Incentive %</span>
+            {owner ? (
+              <input
+                name="incentivePct"
+                type="number"
+                inputMode="numeric"
+                step="1"
+                min="0"
+                max="100"
+                defaultValue={household.incentivePct}
+                className="field num mt-2"
+              />
+            ) : (
+              <span className="money mt-2 block text-[28px] font-bold">
+                {household.incentivePct}%
+              </span>
+            )}
             <span className="mt-2 block text-[13px] text-muted">
               The share of each month&rsquo;s savings paid out as a reward for keeping under budget.
-              At 10%, saving 50,000 earns 5,000.
-              {!owner && " Only the owner can change this, since it is what you are paid."}
+              At {household.incentivePct}%, saving 50,000 earns{" "}
+              {(50000 * household.incentivePct) / 100 % 1 === 0
+                ? ((50000 * household.incentivePct) / 100).toLocaleString("en-PK")
+                : ((50000 * household.incentivePct) / 100).toFixed(2)}
+              .
+              {!owner && " The owner sets this rate."}
             </span>
           </label>
 
