@@ -58,7 +58,13 @@ export default async function Shell({
 
   return (
     <div className="lg:pl-[256px]">
-      <Sidebar household={household.name} reviewCount={Number(review.v)} />
+      <Sidebar
+        household={household.name}
+        userName={user.name}
+        email={user.email}
+        logout={logout}
+        reviewCount={Number(review.v)}
+      />
       <div
         className={
           "mx-auto min-h-[100dvh] px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] lg:px-12 lg:pb-16 lg:pt-10 " +
