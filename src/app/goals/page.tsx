@@ -22,7 +22,8 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
   }
 
   return (
-    <Shell wide title="Goals">
+    <Shell
+      back={{ href: "/", label: "Home" }} wide title="Goals">
       {sp.e && (
         <p className="mb-5 rounded-[14px] bg-blush px-4 py-3 text-sm font-bold">{sp.e}</p>
       )}

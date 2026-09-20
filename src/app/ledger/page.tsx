@@ -166,25 +166,28 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
   return (
     // The table earns the full width; the card list reads better narrow.
     <Shell wide={view === "table"} title="Ledger" action={
-      <div className="flex shrink-0 items-center gap-2">
-        {/* Adding an entry is the most common reason to open the ledger and
-            not already have a row; the sidebar button is off-screen on a
-            phone, so it also lives here. */}
-        <Link href="/entry" className="btn btn-sm gap-1.5" aria-label="Add entry">
-          <Plus size={15} strokeWidth={2.6} />
-          <span className="hidden sm:inline">Add entry</span>
-        </Link>
+      <>
+        {/* The month picker stays whole: it is one unit that must never be
+            split or clipped, so it wraps as a block. */}
+        <div className="flex items-center gap-1 rounded-full bg-card p-1">
+          <Link href={`/ledger?m=${prev}`} aria-label="Previous month"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-ink transition hover:bg-page">
+            <ChevronLeft size={18} strokeWidth={2.5} />
+          </Link>
+          <span className="whitespace-nowrap px-1 text-[13px] font-bold">{monthLabelShort(m)}</span>
+          <Link href={`/ledger?m=${nextM}`} aria-label="Next month"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-ink transition hover:bg-page">
+            <ChevronRight size={18} strokeWidth={2.5} />
+          </Link>
+        </div>
         <ViewToggle view={view} />
-        <Link href={`/ledger?m=${prev}`} aria-label="Previous month"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-ink transition hover:bg-page">
-          <ChevronLeft size={18} strokeWidth={2.5} />
+        {/* The phone already has a + tab in the bottom bar, so this is the
+            desktop affordance only and does not compete for narrow space. */}
+        <Link href="/entry" className="btn btn-sm hidden gap-1.5 sm:inline-flex" aria-label="Add entry">
+          <Plus size={15} strokeWidth={2.6} />
+          <span>Add entry</span>
         </Link>
-        <span className="whitespace-nowrap px-2 text-[13px] font-bold">{monthLabelShort(m)}</span>
-        <Link href={`/ledger?m=${nextM}`} aria-label="Next month"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-ink transition hover:bg-page">
-          <ChevronRight size={18} strokeWidth={2.5} />
-        </Link>
-      </div>
+      </>
     }>
       {sp.saved && (
         <Suspense fallback={null}>

@@ -6,6 +6,8 @@ import { and, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { logout } from "@/actions/auth";
 import { markAllRead, dismiss } from "@/actions/notifications";
 import NotificationBell from "./NotificationBell";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 
 /**
  * App frame. Phones get a bottom tab bar; lg+ gets a fixed sidebar rail and a
@@ -13,11 +15,16 @@ import NotificationBell from "./NotificationBell";
  *
  * `wide` opts a page into the full multi-column width (the dashboard); other
  * pages stay in a readable single column.
+ *
+ * `back` is required on any page the bottom tab bar cannot reach. Without it
+ * a non-technical user who opens, say, Settings › Categories has no way out
+ * but the browser's own back button, which a home-screen PWA does not show.
  */
 export default async function Shell({
   title,
   titleSlot,
   action,
+  back,
   wide = false,
   children
 }: {
@@ -25,6 +32,8 @@ export default async function Shell({
   /** Replaces the default <h1>, for pages that need a back button beside it. */
   titleSlot?: React.ReactNode;
   action?: React.ReactNode;
+  /** Where "back" goes, and what to call the place it returns to. */
+  back?: { href: string; label: string };
   wide?: boolean;
   children: React.ReactNode;
 }) {
@@ -59,9 +68,29 @@ export default async function Shell({
         <header className="mb-6 gap-3 lg:mb-8 lg:flex lg:items-center">
           <div className="flex items-center justify-between gap-3 lg:min-w-0 lg:flex-1">
             {titleSlot ?? (
-              <h1 className="min-w-0 truncate font-display text-[26px] font-extrabold tracking-[-0.03em] lg:text-[34px]">
-                {title}
-              </h1>
+              <div className="flex min-w-0 items-center gap-3">
+                {back && (
+                  <Link
+                    href={back.href}
+                    aria-label={`Back to ${back.label}`}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card text-ink transition hover:bg-page"
+                  >
+                    <ChevronLeft size={19} strokeWidth={2.4} />
+                  </Link>
+                )}
+                <div className="min-w-0">
+                  {/* Naming the destination beats a bare chevron for anyone
+                      who does not already know the app's shape. */}
+                  {back && (
+                    <span className="block text-[11px] font-bold uppercase tracking-[0.08em] text-muted">
+                      {back.label}
+                    </span>
+                  )}
+                  <h1 className="min-w-0 truncate font-display text-[26px] font-extrabold tracking-[-0.03em] lg:text-[34px]">
+                    {title}
+                  </h1>
+                </div>
+              </div>
             )}
             {/* The bell stays beside the title on a phone; the page's own
                 controls drop to their own line below. */}

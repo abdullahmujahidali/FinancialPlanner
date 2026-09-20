@@ -77,7 +77,8 @@ export default async function SettingsHub() {
   ];
 
   return (
-    <Shell title="Settings">
+    <Shell
+      back={{ href: "/", label: "Home" }} title="Settings">
       <div className="overflow-hidden rounded-[22px] bg-card">
         {items.map(({ href, Icon, label, hint, meta, ownerOnly }, i) => (
           <Link

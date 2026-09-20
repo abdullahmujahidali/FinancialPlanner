@@ -116,7 +116,8 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
   );
 
   return (
-    <Shell wide title="Files & imports">
+    <Shell
+      back={{ href: "/settings", label: "Settings" }} wide title="Files & imports">
       <div className="mb-5 flex gap-2">
         {chip("files", "Files")}
         {chip("imports", "Imports")}

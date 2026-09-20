@@ -47,6 +47,7 @@ export default async function InsightsPage({
 
   return (
     <Shell
+      back={{ href: "/", label: "Home" }}
       title="Insights"
       action={
         <div className="flex items-center gap-1">

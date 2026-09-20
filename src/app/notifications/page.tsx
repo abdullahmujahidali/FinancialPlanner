@@ -67,7 +67,8 @@ export default async function NotificationsPage({
   ];
 
   return (
-    <Shell title="Notifications">
+    <Shell
+      back={{ href: "/", label: "Home" }} title="Notifications">
       <div className="mb-5 flex flex-wrap items-center gap-2">
         {tabs.map((tab) => (
           <Link

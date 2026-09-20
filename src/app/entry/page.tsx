@@ -21,7 +21,8 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
   ]);
 
   return (
-    <Shell title="Add entry">
+    <Shell
+      back={{ href: "/ledger", label: "Ledger" }} title="Add entry">
       {sp.ok && (
         <p className="mb-5 rounded-[18px] bg-acid px-6 py-4 text-[14px] font-bold">Saved.</p>
       )}

@@ -24,7 +24,8 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
   }
 
   return (
-    <Shell wide title="Import statement">
+    <Shell
+      back={{ href: "/settings", label: "Settings" }} wide title="Import statement">
       {sp.e && (
         <p className="mb-5 rounded-[14px] bg-blush px-4 py-3 text-sm font-bold">{sp.e}</p>
       )}

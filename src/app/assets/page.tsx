@@ -36,6 +36,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
 
   return (
     <Shell
+      back={{ href: "/", label: "Home" }}
       wide
       title="Assets"
     >
