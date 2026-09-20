@@ -35,8 +35,7 @@ export default async function SettingsHub() {
       Icon: Home,
       label: "Household",
       hint: "Name, monthly budget, currency",
-      meta: household.name,
-      ownerOnly: true
+      meta: household.name
     },
     {
       href: "/settings/accounts",

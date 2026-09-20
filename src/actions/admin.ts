@@ -6,14 +6,28 @@ import { db, t } from "@/db/client";
 import { and, eq } from "drizzle-orm";
 import { requireContext } from "@/lib/session";
 
+/**
+ * Household settings.
+ *
+ * Anyone in the household can set the name, budget and currency — the person
+ * doing the daily categorising is the one who notices when the budget is
+ * wrong, and having to ask the owner to change a number makes the tool
+ * theirs rather than the household's.
+ *
+ * The incentive percentage is the exception: it is what the day-to-day user
+ * is paid, so it stays with the owner. A member's submission keeps the
+ * stored value rather than being rejected outright.
+ */
 export async function updateHousehold(formData: FormData) {
   const { household, role } = await requireContext();
-  if (role !== "owner") return;
+  const incentivePct = role === "owner"
+    ? Number(formData.get("incentivePct") || 10)
+    : household.incentivePct;
   await db().update(t.households).set(({
     name: String(formData.get("name") || household.name),
     currency: String(formData.get("currency") || household.currency),
     monthlyBudget: Number(formData.get("monthlyBudget") || 0).toFixed(2),
-    incentivePct: Number(formData.get("incentivePct") || 10)
+    incentivePct
   } as any)).where(eq(t.households.id, household.id));
   revalidatePath("/settings", "layout"); revalidatePath("/");
 }

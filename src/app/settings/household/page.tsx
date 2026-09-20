@@ -28,8 +28,7 @@ export default async function HouseholdSettings() {
             <input
               name="name"
               defaultValue={household.name}
-              disabled={!owner}
-              className="field mt-2 disabled:text-muted"
+              className="field mt-2"
             />
             <span className="mt-2 block text-[13px] text-muted">
               What this ledger is called — shown at the top of every page.
@@ -45,8 +44,7 @@ export default async function HouseholdSettings() {
               step="1"
               min="0"
               defaultValue={Number(household.monthlyBudget)}
-              disabled={!owner}
-              className="field num mt-2 disabled:text-muted"
+              className="field num mt-2"
             />
             <span className="mt-2 block text-[13px] text-muted">
               The target spend for one month. Whatever is left over at month end counts as savings.
@@ -54,7 +52,9 @@ export default async function HouseholdSettings() {
           </label>
 
           <label className="block">
-            <span className="eyebrow text-muted">Incentive %</span>
+            <span className="eyebrow text-muted">
+              Incentive %{!owner && <span className="ml-2 font-bold text-muted">owner sets this</span>}
+            </span>
             <input
               name="incentivePct"
               type="number"
@@ -69,6 +69,7 @@ export default async function HouseholdSettings() {
             <span className="mt-2 block text-[13px] text-muted">
               The share of each month&rsquo;s savings paid out as a reward for keeping under budget.
               At 10%, saving 50,000 earns 5,000.
+              {!owner && " Only the owner can change this, since it is what you are paid."}
             </span>
           </label>
 
@@ -77,8 +78,7 @@ export default async function HouseholdSettings() {
             <select
               name="currency"
               defaultValue={household.currency}
-              disabled={!owner}
-              className="field mt-2 disabled:text-muted"
+              className="field mt-2"
             >
               {CURRENCY_CODES.map(code => (
                 <option key={code} value={code}>{code}</option>
@@ -91,13 +91,7 @@ export default async function HouseholdSettings() {
         </div>
 
         <div className="mt-7">
-          {owner ? (
-            <button className="btn w-full">Save changes</button>
-          ) : (
-            <p className="text-[13px] font-semibold text-muted">
-              Only the household owner can change these.
-            </p>
-          )}
+          <button className="btn w-full">Save changes</button>
         </div>
       </form>
     </SettingsPage>
