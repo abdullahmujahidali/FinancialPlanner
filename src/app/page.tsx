@@ -73,9 +73,12 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       .groupBy(sql`to_char(${t.transactions.txDate}::date, 'YYYY-MM')`)
       .orderBy(sql`to_char(${t.transactions.txDate}::date, 'YYYY-MM')`),
 
+    // LEFT join + coalesce: an asset with no revaluation yet is still worth
+    // roughly what it cost. An inner join dropped those to zero here while the
+    // assets page counted them, so the two pages disagreed on net worth.
     db().execute(sql`
-      select coalesce(sum(v.value), 0) as total from ${t.assets} a
-      join lateral (
+      select coalesce(sum(coalesce(v.value, a.purchase_price)), 0) as total from ${t.assets} a
+      left join lateral (
         select value from ${t.assetValues} av where av.asset_id = a.id order by av.valued_on desc, av.id desc limit 1
       ) v on true
       where a.household_id = ${household.id} and a.status = 'active'`),
@@ -221,11 +224,20 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-ink" />Out</span>
               </div>
             </div>
-            {trend.length > 1 ? (
-              <BarChart data={trend} current={currentLabel} />
+            {trend.length > 0 ? (
+              <>
+                <BarChart data={trend} current={currentLabel} />
+                {trend.length === 1 && (
+                  // One month is still a comparison worth seeing; only say the
+                  // trend is thin, rather than showing an empty card.
+                  <p className="mt-5 text-center text-[13px] font-semibold text-muted">
+                    One month so far — more bars appear as the months go by.
+                  </p>
+                )}
+              </>
             ) : (
               <p className="py-10 text-center text-[14px] font-semibold text-muted">
-                One month of data so far — the trend appears once {monthLabelShort(nextM)} has entries.
+                No entries yet this month.
               </p>
             )}
           </section>

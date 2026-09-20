@@ -53,8 +53,8 @@ export function pkr(n: number | string, opts: { compact?: boolean; bare?: boolea
 
   if (opts.compact) {
     if (current.lakh) {
-      if (a >= 1e7) return `${sign}${sym}${trim(a / 1e7)} Cr`;
-      if (a >= 1e5) return `${sign}${sym}${trim(a / 1e5)} L`;
+      if (a >= 1e7) return `${sign}${sym}${trim(a / 1e7)} crore`;
+      if (a >= 1e5) return `${sign}${sym}${trim(a / 1e5)} lakh`;
     } else {
       if (a >= 1e9) return `${sign}${sym}${trim(a / 1e9)}B`;
       if (a >= 1e6) return `${sign}${sym}${trim(a / 1e6)}M`;

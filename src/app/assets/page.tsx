@@ -38,7 +38,6 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
     <Shell
       wide
       title="Assets"
-      action={<span className="money text-[22px] font-bold lg:text-[26px]">{pkr(netWorth, { compact: true })}</span>}
     >
       {sp.e && (
         <p className="mb-5 rounded-[14px] bg-blush px-4 py-3 text-sm font-bold text-ink">{sp.e}</p>

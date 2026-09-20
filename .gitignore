@@ -14,3 +14,5 @@ tsconfig.tsbuildinfo
 DB_DUMP.SQL
 *.sql
 *.SQL
+
+.env.prod-backup

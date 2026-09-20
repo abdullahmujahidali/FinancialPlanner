@@ -45,8 +45,14 @@ export async function addTransaction(formData: FormData) {
   }).returning();
 
   await saveAttachment(household.id, formData.get("receipt") as File | null, { transactionId: tx.id });
-  revalidatePath("/"); revalidatePath("/ledger");
-  redirect("/entry?ok=1");
+  revalidatePath("/"); revalidatePath("/ledger"); revalidatePath("/entry");
+  // Confirm with the actual figure, not a bare "Saved." — and land on the
+  // ledger where the new row is visible, so the entry is self-evidently there.
+  const saved = new URLSearchParams({
+    saved: String(tx.amount),
+    m: tx.txDate.slice(0, 7)
+  });
+  redirect(`/ledger?${saved.toString()}`);
 }
 
 /**

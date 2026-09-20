@@ -10,11 +10,15 @@ import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/mo
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 import ConfirmDelete from "@/components/ConfirmDelete";
 import LedgerFilters from "@/components/LedgerFilters";
+import SavedToast from "@/components/SavedToast";
+import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
 
 type Params = {
   m?: string;
+  /** Amount just saved, so the ledger can confirm it landed. */
+  saved?: string;
   q?: string;
   cat?: string;
   person?: string;
@@ -147,6 +151,12 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
         </Link>
       </div>
     }>
+      {sp.saved && (
+        <Suspense fallback={null}>
+          <SavedToast label={`Saved ${pkr(Number(sp.saved))}`} />
+        </Suspense>
+      )}
+
       <LedgerFilters categories={categories} persons={persons} accounts={accounts} month={m} />
 
       {rows.length === 0 ? (
@@ -195,7 +205,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                     {/* Two lines rather than a hard truncate: a bank description
                         is the only handle a row has, and "Raast P2P Fund trans…"
                         identifies nothing. */}
-                    <div className="line-clamp-2 text-[15px] font-semibold">{tx.description || category || tx.type}</div>
+                    <div className="line-clamp-2 text-[15px] font-semibold">{tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense")}</div>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] font-medium text-muted">
                       <span>{account}</span>
                       {category && <span>· {category}</span>}
@@ -216,7 +226,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                         Still reachable on a phone — there is no other delete. */}
                     <details className="group relative sm:hidden">
                       <summary
-                        aria-label={`More actions for ${tx.description || category || tx.type}`}
+                        aria-label={`More actions for ${tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense")}`}
                         className="flex h-8 w-7 cursor-pointer list-none items-center justify-center rounded-full text-muted transition group-open:bg-page"
                       >
                         <MoreHorizontal size={16} strokeWidth={2.4} />
@@ -224,7 +234,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                       <div className="absolute right-0 z-10 mt-1 rounded-full bg-card p-0.5 shadow-soft">
                         <ConfirmDelete
                           id={tx.id}
-                          label={tx.description || category || tx.type}
+                          label={tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense")}
                           action={deleteTransaction}
                         />
                       </div>
@@ -233,7 +243,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                     <span className="hidden sm:block">
                       <ConfirmDelete
                         id={tx.id}
-                        label={tx.description || category || tx.type}
+                        label={tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense")}
                         action={deleteTransaction}
                       />
                     </span>
