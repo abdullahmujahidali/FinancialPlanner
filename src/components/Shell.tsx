@@ -56,14 +56,25 @@ export default async function Shell({
           (wide ? "max-w-lg lg:max-w-none xl:max-w-[1500px]" : "max-w-lg lg:max-w-3xl")
         }
       >
-        <header className="mb-6 flex items-center justify-between gap-3 lg:mb-8">
-          {titleSlot ?? (
-            <h1 className="min-w-0 truncate font-display text-[26px] font-extrabold tracking-[-0.03em] lg:text-[34px]">
-              {title}
-            </h1>
+        <header className="mb-6 gap-3 lg:mb-8 lg:flex lg:items-center">
+          <div className="flex items-center justify-between gap-3 lg:min-w-0 lg:flex-1">
+            {titleSlot ?? (
+              <h1 className="min-w-0 truncate font-display text-[26px] font-extrabold tracking-[-0.03em] lg:text-[34px]">
+                {title}
+              </h1>
+            )}
+            {/* The bell stays beside the title on a phone; the page's own
+                controls drop to their own line below. */}
+            <div className="shrink-0 lg:hidden">
+              <NotificationBell notes={notes} markRead={markAllRead} dismiss={dismiss} />
+            </div>
+          </div>
+          {action && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 lg:mt-0 lg:flex-nowrap lg:shrink-0">
+              {action}
+            </div>
           )}
-          <div className="flex shrink-0 items-center gap-2">
-            {action}
+          <div className="hidden shrink-0 lg:block">
             <NotificationBell notes={notes} markRead={markAllRead} dismiss={dismiss} />
           </div>
         </header>

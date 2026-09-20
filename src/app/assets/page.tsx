@@ -5,7 +5,7 @@ import { db, t } from "@/db/client";
 import { asc, desc, eq } from "drizzle-orm";
 import { addAsset, revalueAsset, sellAsset, deleteAsset } from "@/actions/portfolio";
 import { pkr, todayStr } from "@/lib/money";
-import { Plus, Building2, ChevronRight } from "lucide-react";
+import { Plus, Building2, ChevronRight, MoreHorizontal } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import ConfirmDelete from "@/components/ConfirmDelete";
 
@@ -103,9 +103,31 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                           <ChevronRight size={17} strokeWidth={2.4} className="text-muted" />
                         </div>
                       </Link>
-                      <div className="shrink-0">
-                        <ConfirmDelete id={a.id} label={a.name} action={deleteAsset} />
-                      </div>
+                      {/*
+                        Selling is the normal way an asset leaves the books —
+                        it keeps the purchase price, the value history and the
+                        sale, and only drops out of net worth. Deleting throws
+                        all of that away, so it hides behind ⋯ rather than
+                        sitting at the same weight as "Sold".
+                      */}
+                      <details className="group relative shrink-0">
+                        <summary
+                          aria-label={`More actions for ${a.name}`}
+                          className="flex h-9 w-8 cursor-pointer list-none items-center justify-center rounded-full text-muted transition hover:bg-page group-open:bg-page"
+                        >
+                          <MoreHorizontal size={16} strokeWidth={2.4} />
+                        </summary>
+                        <div className="absolute right-0 z-10 mt-1 w-[232px] rounded-[16px] bg-card p-3 shadow-soft">
+                          <p className="text-[12px] font-semibold leading-snug text-muted">
+                            Sold it? Use the <strong className="text-ink">Sold</strong> box
+                            below — that keeps the history. Deleting erases this asset and
+                            every valuation on it.
+                          </p>
+                          <div className="mt-2 flex justify-end">
+                            <ConfirmDelete id={a.id} label={a.name} action={deleteAsset} />
+                          </div>
+                        </div>
+                      </details>
                     </div>
                     {a.status === "active" && (
                       <div className="grid grid-cols-1 gap-3 bg-page p-6 sm:grid-cols-2 lg:px-7">
