@@ -1,9 +1,12 @@
 import SettingsPage from "@/components/SettingsPage";
 import EditableRow from "@/components/EditableRow";
+import OpeningBalance from "@/components/OpeningBalance";
+import { getBalances } from "@/lib/balances";
+import { pkr } from "@/lib/money";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { asc, eq } from "drizzle-orm";
-import { addAccount, renameAccount, setAccountArchived } from "@/actions/admin";
+import { addAccount, renameAccount, setAccountArchived, setOpeningBalance } from "@/actions/admin";
 import { Plus } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +28,9 @@ export default async function AccountsSettings() {
     .where(eq(t.accounts.householdId, household.id))
     .orderBy(asc(t.accounts.id));
 
+  const { accounts: balances, total, incomplete } = await getBalances(household.id);
+  const balanceOf = new Map(balances.map((b) => [b.id, b]));
+
   const live = accounts.filter((a) => !a.isArchived);
   const archived = accounts.filter((a) => a.isArchived);
 
@@ -33,6 +39,22 @@ export default async function AccountsSettings() {
       title="Accounts"
       description="Accounts are where money sits — each bank account plus the cash wallet you carry. Archiving hides an account you no longer use without deleting any of its history."
     >
+      {/* The number the whole page exists to produce. */}
+      <div className="zone-ink mb-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="eyebrow text-white/45">Money on hand</span>
+          {incomplete && (
+            <span className="text-[11px] font-bold text-blush">some balances not set</span>
+          )}
+        </div>
+        <div className="money-xl mt-3 text-[38px] text-acid lg:text-[46px]">{pkr(total)}</div>
+        <p className="mt-2 text-[12.5px] font-medium text-white/55">
+          {incomplete
+            ? "Set an opening balance on each account below and this becomes the real figure."
+            : "Across every active account, kept current by the ledger."}
+        </p>
+      </div>
+
       <form action={addAccount} className="mb-4 flex items-center gap-3 rounded-[22px] bg-card p-5 lg:p-6">
         <input
           name="name"
@@ -64,18 +86,41 @@ export default async function AccountsSettings() {
           </div>
         ) : (
           <ul>
-            {live.map((a) => (
-              <EditableRow
-                key={a.id}
-                id={a.id}
-                name={a.name}
-                renameAction={renameAccount}
-                /* Cash is where ATM withdrawals land; archiving it would break
-                   transfers, so it stays put. */
-                archiveAction={a.kind === "cash" ? undefined : setAccountArchived}
-                badge={<span className="tag-muted shrink-0">{a.kind}</span>}
-              />
-            ))}
+            {live.map((a) => {
+              const b = balanceOf.get(a.id);
+              return (
+                <li key={a.id} className="rule-row last:border-0">
+                  <ul>
+                    <EditableRow
+                      id={a.id}
+                      name={a.name}
+                      renameAction={renameAccount}
+                      /* Cash is where ATM withdrawals land; archiving it would
+                         break transfers, so it stays put. */
+                      archiveAction={a.kind === "cash" ? undefined : setAccountArchived}
+                      badge={
+                        <span className="flex shrink-0 items-center gap-2">
+                          {b?.balance != null && (
+                            <span className="money text-[14px] font-bold">{pkr(b.balance)}</span>
+                          )}
+                          <span className="tag-muted">{a.kind}</span>
+                        </span>
+                      }
+                    />
+                  </ul>
+                  <OpeningBalance
+                    id={a.id}
+                    name={a.name}
+                    kind={a.kind}
+                    opening={b?.opening ?? null}
+                    openingDate={b?.openingDate ?? null}
+                    movement={b?.movement ?? 0}
+                    balance={b?.balance ?? null}
+                    action={setOpeningBalance}
+                  />
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

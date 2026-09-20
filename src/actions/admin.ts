@@ -150,3 +150,25 @@ export async function deleteRule(formData: FormData) {
     .where(and(eq(t.importRules.householdId, household.id), eq(t.importRules.id, Number(formData.get("id")))));
   revalidatePath("/settings", "layout");
 }
+
+/**
+ * Set what an account held on a given date. Everything after it is already in
+ * the ledger, so this single figure is what turns movement into a balance.
+ */
+export async function setOpeningBalance(formData: FormData) {
+  const { household } = await requireContext();
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  const raw = String(formData.get("openingBalance") || "").trim();
+  const date = String(formData.get("openingDate") || "").trim();
+  await db().update(t.accounts)
+    .set(({
+      // Blank clears it back to "unknown" rather than storing a false zero.
+      openingBalance: raw === "" ? null : Number(raw).toFixed(2),
+      openingDate: raw === "" ? null : date || new Date().toISOString().slice(0, 10)
+    } as any))
+    .where(and(eq(t.accounts.householdId, household.id), eq(t.accounts.id, id)));
+  revalidatePath("/settings", "layout");
+  revalidatePath("/");
+  revalidatePath("/assets");
+}

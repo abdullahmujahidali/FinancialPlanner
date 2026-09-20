@@ -7,6 +7,7 @@ import { addAsset, revalueAsset, sellAsset, deleteAsset } from "@/actions/portfo
 import { pkr, todayStr } from "@/lib/money";
 import { Plus, Building2, ChevronRight, MoreHorizontal } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
+import { getBalances } from "@/lib/balances";
 import ConfirmDelete from "@/components/ConfirmDelete";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,15 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
   const photoByAsset = new Map(photos.filter(p => p.assetId).map(p => [p.assetId!, p.id]));
 
   const active = assets.filter(a => a.status === "active");
-  const netWorth = active.reduce((s, a) => s + (values.get(a.id)?.latest ?? 0), 0);
+  const assetTotal = active.reduce((s, a) => s + (values.get(a.id)?.latest ?? 0), 0);
+
+  /**
+   * Net worth is what the household owns PLUS what it actually has. Assets
+   * alone answered "what is the plot worth" while ignoring every rupee in the
+   * bank, which made the headline figure quietly wrong.
+   */
+  const { total: cash, incomplete: cashUnknown } = await getBalances(household.id);
+  const netWorth = assetTotal + cash;
   const byYear = new Map<string, typeof assets>();
   for (const a of assets) {
     const y = a.purchaseDate.slice(0, 4);
@@ -47,10 +56,31 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
       {/* ── Net worth zone ───────────────────────────────────────────────── */}
       <section className="zone-ink mb-5">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="eyebrow text-white/45">Net worth · {active.length} active</span>
-          <span className="num text-[12px] font-bold text-white/45">{assets.length} total</span>
+          <span className="eyebrow text-white/45">Net worth</span>
+          <span className="num text-[12px] font-bold text-white/45">{assets.length} assets</span>
         </div>
         <div className="money-xl mt-4 text-[48px] text-acid lg:text-[68px]">{pkr(netWorth, { compact: true })}</div>
+
+        {/* Show the two halves, so the headline is checkable. */}
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <div className="rounded-[14px] bg-ink2 px-4 py-3">
+            <div className="eyebrow text-white/40">Money on hand</div>
+            <div className="money mt-1 text-[19px] font-extrabold text-white">
+              {pkr(cash, { compact: true })}
+            </div>
+            {cashUnknown && (
+              <Link href="/settings/accounts" className="mt-1 block text-[11px] font-bold text-blush underline">
+                some balances not set
+              </Link>
+            )}
+          </div>
+          <div className="rounded-[14px] bg-ink2 px-4 py-3">
+            <div className="eyebrow text-white/40">Things owned · {active.length}</div>
+            <div className="money mt-1 text-[19px] font-extrabold text-white">
+              {pkr(assetTotal, { compact: true })}
+            </div>
+          </div>
+        </div>
       </section>
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start">

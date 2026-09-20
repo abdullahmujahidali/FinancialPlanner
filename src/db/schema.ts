@@ -40,7 +40,18 @@ export const accounts = pgTable("accounts", {
   householdId: integer("household_id").notNull().references(() => households.id),
   name: text("name").notNull(),
   kind: text("kind").notNull().default("bank"), // bank | cash
-  isArchived: boolean("is_archived").notNull().default(false)
+  isArchived: boolean("is_archived").notNull().default(false),
+  /**
+   * What sat in the account the day the household started keeping this book.
+   *
+   * A ledger records movement, not position — it cannot know what was already
+   * there before the first import. With this one figure the live balance
+   * becomes derivable: opening + income − expense ± transfers. Null means the
+   * balance is unknown, which is shown as such rather than as zero.
+   */
+  openingBalance: numeric("opening_balance", { precision: 14, scale: 2 }),
+  /** The date `openingBalance` was true; movement is counted from here. */
+  openingDate: date("opening_date")
 });
 
 export const categories = pgTable("categories", {

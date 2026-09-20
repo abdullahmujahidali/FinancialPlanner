@@ -7,6 +7,7 @@ import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
+import { getBalances } from "@/lib/balances";
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -98,7 +99,10 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const currentLabel = new Date(Number(m.split("-")[0]), Number(m.split("-")[1]) - 1, 1)
     .toLocaleDateString("en-PK", { month: "short" });
 
-  const netWorth = Number((netWorthRows.rows?.[0] as any)?.total ?? 0);
+  const assetTotal = Number((netWorthRows.rows?.[0] as any)?.total ?? 0);
+  // Net worth is things owned plus money actually held, not assets alone.
+  const { total: cash, incomplete: cashUnknown } = await getBalances(household.id);
+  const netWorth = assetTotal + cash;
 
   // One grouped query for every goal's saved total, instead of one per goal.
   const goalSums = new Map<number, number>();
@@ -242,15 +246,48 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             )}
           </section>
 
-          {/* ── Net worth ────────────────────────────────────────────────── */}
-          <Link href="/assets"
-            className="flex items-center justify-between gap-3 rounded-[22px] bg-ink px-6 py-6 text-white transition hover:bg-ink2 lg:px-8">
-            <span className="eyebrow text-white/45">Net worth</span>
-            <span className="flex items-center gap-3">
-              <span className="money text-[28px] font-bold text-acid">{pkr(netWorth, { compact: true })}</span>
-              <ArrowRight size={19} strokeWidth={2.5} />
-            </span>
-          </Link>
+          {/*
+            ── Money on hand and net worth ──────────────────────────────────
+            Two different questions, so two figures rather than one with a
+            footnote. "What can I spend right now" is asked far more often
+            than "what am I worth", and it is the one a ledger can answer to
+            the rupee — so it leads, and links to the accounts behind it.
+          */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Link
+              href="/settings/accounts"
+              className="block rounded-[22px] bg-acid px-6 py-6 text-ink transition hover:bg-aciddim lg:px-7"
+            >
+              <span className="flex items-center justify-between gap-3">
+                <span className="eyebrow">Money on hand</span>
+                <ArrowRight size={17} strokeWidth={2.5} />
+              </span>
+              <span className="money-xl mt-3 block text-[32px] lg:text-[38px]">
+                {pkr(cash, { compact: true })}
+              </span>
+              <span className="mt-2 block text-[12px] font-bold">
+                {cashUnknown
+                  ? "Some accounts have no opening balance — set them to make this exact"
+                  : "Across every account, kept current by the ledger"}
+              </span>
+            </Link>
+
+            <Link
+              href="/assets"
+              className="block rounded-[22px] bg-ink px-6 py-6 text-white transition hover:bg-ink2 lg:px-7"
+            >
+              <span className="flex items-center justify-between gap-3">
+                <span className="eyebrow text-white/45">Net worth</span>
+                <ArrowRight size={17} strokeWidth={2.5} />
+              </span>
+              <span className="money-xl mt-3 block text-[32px] text-acid lg:text-[38px]">
+                {pkr(netWorth, { compact: true })}
+              </span>
+              <span className="mt-2 block text-[12px] font-semibold text-white/50">
+                {pkr(assetTotal, { compact: true })} owned + money on hand
+              </span>
+            </Link>
+          </div>
 
           {/* ── Goals ────────────────────────────────────────────────────── */}
           <section className="zone-card">
