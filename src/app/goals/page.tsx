@@ -6,6 +6,7 @@ import { addGoal, contributeToGoal, completeGoal } from "@/actions/portfolio";
 import { pkr } from "@/lib/money";
 import { Plus, Check, Target } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
+import { getGoalForecasts, etaLabel } from "@/lib/forecast";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,17 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
     sums.set(g.id, Number(s.v));
   }
 
+  const forecasts = await getGoalForecasts(household.id, Number(household.monthlyBudget));
+  const fc = new Map(forecasts.map((f) => [f.goalId, f]));
+  // Every ETA assumes the whole monthly saving goes to that one goal, so with
+  // more than one goal open the dates cannot all be true at once. Say so once,
+  // rather than silently implying they can.
+  const competing = forecasts.filter((f) => f.etaMonth).length > 1;
+  // When nothing can be forecast yet the reason is the same for every goal, so
+  // it is said once above the list rather than repeated on each card.
+  const blocked = forecasts.length > 0 && forecasts.every((f) => !f.etaMonth);
+  const blockedWhy = blocked ? forecasts[0].note : null;
+
   return (
     <Shell
       back={{ href: "/", label: "Home" }} wide title="Goals">
@@ -31,6 +43,19 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
         {/* ── Goal cards ───────────────────────────────────────────────── */}
         <div className="flex flex-col gap-5 lg:w-1/2 lg:shrink-0">
+          {blockedWhy && (
+            <p className="rounded-[14px] bg-page px-4 py-3 text-[13px] font-bold leading-snug">
+              {blockedWhy}
+            </p>
+          )}
+
+          {competing && (
+            <p className="rounded-[14px] bg-page px-4 py-3 text-[13px] font-bold leading-snug">
+              Each date below assumes the whole monthly saving goes to that goal. With more
+              than one goal open they cannot all land on time.
+            </p>
+          )}
+
           {goals.length === 0 && (
             <EmptyState
               Icon={Target}
@@ -43,6 +68,7 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
             const saved = sums.get(g.id) ?? 0;
             const pct = Math.min(100, Math.round((saved / Number(g.targetAmount)) * 100));
             const done = g.status === "done";
+            const f = fc.get(g.id);
             return (
               <div key={g.id}
                 className={"overflow-hidden rounded-[22px] bg-card " + (done ? "opacity-60" : "")}>
@@ -62,7 +88,29 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
                   <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-page">
                     <div className="h-full rounded-full bg-acid" style={{ width: `${pct}%` }} />
                   </div>
-                  <div className="mt-3 text-[13px] font-bold">{pct}% saved</div>
+                  <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                    <span className="text-[13px] font-bold">{pct}% saved</span>
+                    {!done && f?.etaMonth && (
+                      <span className="num text-[13px] font-bold">
+                        on track for {etaLabel(f.etaMonth)}
+                      </span>
+                    )}
+                  </div>
+
+                  {!done && f && !blocked && (
+                    <div className="mt-2 space-y-1.5 text-[13px] leading-snug text-muted">
+                      <p>{f.note}</p>
+                      {f.deadline && f.etaMonth && !f.deadline.onTrack && (
+                        <p className="font-bold text-ink">
+                          That misses {etaLabel(f.deadline.month)} — it needs{" "}
+                          {pkr(f.deadline.shortfall)} more a month to land on time.
+                        </p>
+                      )}
+                      {f.deadline && f.etaMonth && f.deadline.onTrack && (
+                        <p>Comfortably inside the {etaLabel(f.deadline.month)} deadline.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {!done && (

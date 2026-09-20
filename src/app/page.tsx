@@ -8,6 +8,7 @@ import { db, t } from "@/db/client";
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
 import { getBalances } from "@/lib/balances";
+import { getGoalForecasts, etaLabel } from "@/lib/forecast";
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -115,6 +116,16 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       .groupBy(t.goalContributions.goalId);
     for (const s of sums) goalSums.set(s.goalId, Number(s.v));
   }
+
+  // The forecast always looks forward from today, so it is only shown on the
+  // current month. On a past month it would sit there unchanged, reading as a
+  // claim about that month rather than about now.
+  const goalFc = new Map(
+    m === monthKey()
+      ? (await getGoalForecasts(household.id, Number(household.monthlyBudget)))
+          .map((f) => [f.goalId, f] as const)
+      : []
+  );
 
   const budget = Number(household.monthlyBudget);
   const spend = Number(spendRow.v);
@@ -318,6 +329,22 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                       <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-page">
                         <div className="h-full rounded-full bg-acid" style={{ width: `${gp}%` }} />
                       </div>
+                      {(() => {
+                        const f = goalFc.get(g.id);
+                        if (!f?.etaMonth) return null;
+                        const late = f.deadline && !f.deadline.onTrack;
+                        return (
+                          <div className="mt-2 text-[12px] font-bold text-muted">
+                            {late ? (
+                              <span className="text-ink">
+                                {etaLabel(f.etaMonth)} — {etaLabel(f.deadline!.month)} target
+                              </span>
+                            ) : (
+                              <>on track for {etaLabel(f.etaMonth)}</>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </Link>
                   );
                 })}

@@ -51,6 +51,7 @@ export default async function Welcome() {
       <ProofStrip />
       <TryIt />
       <Incentive />
+      <Forecast />
       <Features />
       <Tenancy />
       <Closer />
@@ -244,6 +245,74 @@ function Incentive() {
         </div>
       </div>
     </section>
+  );
+}
+
+/* --- Forecast -------------------------------------------------------------- */
+
+function Forecast() {
+  return (
+    <section className={`${SHELL} pb-10 lg:pb-16`}>
+      <div className="zone-card shadow-soft lg:p-12 2xl:p-16">
+        <div className="grid gap-9 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
+          <div>
+            <p className="eyebrow text-muted">The question a ledger usually dodges</p>
+            <h2 className="mt-3 max-w-[18ch] font-display text-[25px] font-extrabold leading-[1.05] tracking-[-0.03em] sm:text-[30px] sm:leading-[1.02] sm:tracking-[-0.035em] lg:text-[46px] 2xl:text-[52px]">
+              When do we actually get the car?
+            </h2>
+            <p className="mt-6 max-w-[54ch] text-[15px] font-medium leading-relaxed text-muted lg:text-[16px]">
+              Every budgeting app will show you a goal filling up. Almost none will tell you
+              the date it finishes, because that means committing to a number.
+            </p>
+            <p className="mt-4 max-w-[54ch] text-[15px] font-medium leading-relaxed text-muted lg:text-[16px]">
+              {BRAND.name} takes the last three complete months of what you actually saved,
+              takes the middle one so a single wedding or Eid does not skew it, and divides.
+              If you set a deadline it will also say plainly when the pace will not make it,
+              and how much more a month closes the gap.
+            </p>
+            <p className="mt-4 max-w-[54ch] text-[15px] font-medium leading-relaxed text-muted lg:text-[16px]">
+              It uses the same saving figure the incentive is paid on. The date and the cut
+              are two views of one number, so neither can flatter the other.
+            </p>
+          </div>
+
+          {/* The demo household's own goal, exactly as the app forecasts it. */}
+          <div className="self-center rounded-[18px] bg-page p-6 lg:p-8">
+            <p className="eyebrow text-muted">Kitchen renovation</p>
+            <div className="mt-5 flex items-baseline justify-between gap-3">
+              <span className="text-[15px] font-bold">9,000 / 12,000</span>
+              <span className="money text-[15px] font-bold text-muted">75%</span>
+            </div>
+            <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-card">
+              <div className="h-full w-3/4 rounded-full bg-acid" />
+            </div>
+            <dl className="mt-7 space-y-3.5">
+              <Row label="Saved each month" value="1,390" />
+              <Row label="Still to go" value="3,000" />
+              <div className="h-px bg-ink/10" />
+              <Row label="Finishes" value="Dec 2026" accent />
+            </dl>
+            <p className="mt-6 text-[13px] font-semibold leading-relaxed text-muted">
+              Five months inside the May 2027 deadline. Had it been the other way round, this
+              would say so instead — and name the monthly figure that fixes it.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Row({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt className={"text-[14px] font-semibold " + (accent ? "text-ink" : "text-muted")}>
+        {label}
+      </dt>
+      <dd className={"money text-[20px] font-extrabold " + (accent ? "text-ink" : "text-ink")}>
+        {value}
+      </dd>
+    </div>
   );
 }
 

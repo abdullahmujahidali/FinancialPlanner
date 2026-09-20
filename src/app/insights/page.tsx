@@ -13,7 +13,8 @@ import {
   Copy,
   Trophy,
   ArrowUpRight,
-  Sparkles
+  Sparkles,
+  Target
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -89,7 +90,8 @@ const ICONS = {
   trend: TrendingUp,
   creep: Repeat,
   duplicate: Copy,
-  streak: Trophy
+  streak: Trophy,
+  goal: Target
 } as const;
 
 function Card({ insight }: { insight: Insight }) {

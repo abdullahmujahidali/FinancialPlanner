@@ -1,6 +1,7 @@
 import { db, t } from "@/db/client";
 import { and, eq, gte, lt, sql } from "drizzle-orm";
-import { monthRange, pkr } from "@/lib/money";
+import { monthKey, monthLabelShort, monthRange, pkr } from "@/lib/money";
+import { getGoalForecasts } from "@/lib/forecast";
 
 /**
  * Insight detection.
@@ -17,7 +18,7 @@ import { monthRange, pkr } from "@/lib/money";
  */
 
 export type Insight = {
-  kind: "spike" | "creep" | "duplicate" | "streak" | "trend";
+  kind: "spike" | "creep" | "duplicate" | "streak" | "trend" | "goal";
   /** Ranking weight — roughly "how much money does this concern". */
   weight: number;
   title: string;
@@ -234,6 +235,29 @@ export async function getInsights(
         weight: saved,
         title: `Under budget ${streak} months running`,
         detail: `That is ${money(saved)} saved across those months, and ${money(share)} earned at ${incentivePct}%.`
+      });
+    }
+  }
+
+  // --- A goal whose pace will not meet its own deadline --------------------
+  //
+  // Only deadlines are reported. A goal with no date cannot be late, and
+  // "this will take 31 months" is on the goals page already — an insight has
+  // to be something the household would not otherwise see.
+  if (budget > 0 && month === monthKey()) {
+    for (const f of await getGoalForecasts(householdId, budget)) {
+      if (!f.deadline || f.deadline.onTrack || !f.etaMonth) continue;
+      if (f.deadline.shortfall < MIN_AMOUNT) continue;
+      out.push({
+        kind: "goal",
+        weight: f.deadline.shortfall * 6,
+        title: `"${f.name}" will not make its deadline at this pace`,
+        detail: `Saving ${money(f.pace)} a month puts it at ${monthLabelShort(
+          f.etaMonth
+        )}, past the ${monthLabelShort(f.deadline.month)} target. Closing the gap takes ${money(
+          f.deadline.shortfall
+        )} more a month.`,
+        href: "/goals"
       });
     }
   }
