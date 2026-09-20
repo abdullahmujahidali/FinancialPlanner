@@ -108,21 +108,36 @@ export default async function YearOverview({
   const spend = Number(spendRow.v);
   const income = Number(incomeRow.v);
 
-  // Only budget for months that have actually happened. Charging the full
-  // twelve months in September claimed ~37 lakh of "savings" from months that
-  // had not been lived through yet, which made the incentive fiction too.
-  const now2 = new Date();
-  const elapsed = year < now2.getFullYear()
-    ? 12
-    : year > now2.getFullYear()
-      ? 0
-      : now2.getMonth() + 1;
-  const budget = monthlyBudget * elapsed;
-  const partial = elapsed > 0 && elapsed < 12;
+  /**
+   * Budget the months that were actually tracked, not every month that has
+   * elapsed. One September import should not be measured against nine months
+   * of allowance — that made the year look 84% under budget when the month
+   * itself was over.
+   */
+  const trackedCount = months.filter((m) => m.hasData).length;
+  const budget = monthlyBudget * trackedCount;
+  const partial = trackedCount > 0 && trackedCount < 12;
 
-  // Savings is money that actually came in and did not go out — not budget
-  // headroom. Budget headroom is shown separately by the progress bar.
-  const savings = Math.max(0, income - spend);
+  /**
+   * Savings is budget headroom — what the household was allowed to spend and
+   * didn't — because that is what the incentive actually pays out on. The
+   * dashboard uses the same definition for a single month, so the two views
+   * must agree.
+   *
+   * It is summed month by month rather than as (year budget − year spend),
+   * for two reasons:
+   *
+   *  - a month nobody tracked is not a month anybody saved in. Crediting
+   *    every elapsed month would have paid out on eight untracked months from
+   *    one September import;
+   *  - overspending in one month should not be cancelled out by underspending
+   *    in another. Each month's saving floors at zero, exactly as the
+   *    dashboard shows it.
+   */
+  const savings = months.reduce(
+    (sum, m) => (m.hasData ? sum + Math.max(0, monthlyBudget - m.expense) : sum),
+    0
+  );
   const incentive = Math.round((savings * household.incentivePct) / 100);
   const pct = budget > 0 ? Math.min(100, Math.round((spend / budget) * 100)) : 0;
   const over = budget > 0 && spend > budget;
@@ -167,7 +182,7 @@ export default async function YearOverview({
             <div className="mt-3 flex justify-between text-[13px] font-bold">
               <span>
                 {pct}% of {pkr(budget, { compact: true })}
-                {partial ? ` budget so far (${elapsed} ${elapsed === 1 ? "month" : "months"})` : " yearly budget"}
+                {partial ? ` budget so far (${trackedCount} tracked ${trackedCount === 1 ? "month" : "months"})` : " yearly budget"}
               </span>
               <span>
                 {over
@@ -182,7 +197,7 @@ export default async function YearOverview({
             <div className="grid grid-cols-3 gap-4">
               {[
                 ["Income", pkr(income, { compact: true }), "text-white", "everything that came in"],
-                ["Saved", pkr(savings, { compact: true }), "text-white", "income minus spend"],
+                ["Saved", pkr(savings, { compact: true }), "text-white", trackedCount === 0 ? "no months tracked yet" : `under budget across ${trackedCount} tracked month${trackedCount === 1 ? "" : "s"}`],
                 [
                   `Incentive ${household.incentivePct}%`,
                   pkr(incentive, { compact: true }),
