@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BookOpen, Plus, Building2, Target, Upload, Settings, Inbox, CalendarRange, FolderOpen, Sparkles, LogOut } from "lucide-react";
+import { Home, BookOpen, Plus, Building2, Target, Upload, Settings, Inbox, CalendarRange, FolderOpen, Sparkles, LogOut, HandCoins } from "lucide-react";
 
 /**
  * Grouped by how often each page is actually opened. Review is the daily job
@@ -23,7 +23,8 @@ const groups: Array<{ label?: string; items: Array<{ href: string; label: string
     label: "Planning",
     items: [
       { href: "/goals", label: "Goals", Icon: Target },
-      { href: "/assets", label: "Assets", Icon: Building2 }
+      { href: "/assets", label: "Assets", Icon: Building2 },
+      { href: "/loans", label: "Loans", Icon: HandCoins }
     ]
   },
   {

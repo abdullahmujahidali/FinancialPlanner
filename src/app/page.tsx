@@ -9,6 +9,7 @@ import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
 import { getBalances } from "@/lib/balances";
 import { getGoalForecasts, etaLabel } from "@/lib/forecast";
+import { getLoanNet } from "@/lib/loans";
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -101,9 +102,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     .toLocaleDateString("en-PK", { month: "short" });
 
   const assetTotal = Number((netWorthRows.rows?.[0] as any)?.total ?? 0);
-  // Net worth is things owned plus money actually held, not assets alone.
+  // Net worth is things owned plus money actually held, less what is owed out
+  // and plus what is owed in — the same arithmetic the Assets page does.
   const { total: cash, incomplete: cashUnknown } = await getBalances(household.id);
-  const netWorth = assetTotal + cash;
+  const { net: loanNet } = await getLoanNet(household.id);
+  const netWorth = assetTotal + cash + loanNet;
 
   // One grouped query for every goal's saved total, instead of one per goal.
   const goalSums = new Map<number, number>();
@@ -296,6 +299,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               </span>
               <span className="mt-2 block text-[12px] font-semibold text-white/50">
                 {pkr(assetTotal, { compact: true })} owned + money on hand
+                {loanNet !== 0 && (loanNet < 0 ? " − loans" : " + loans")}
               </span>
             </Link>
           </div>

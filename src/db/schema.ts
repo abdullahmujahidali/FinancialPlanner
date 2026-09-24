@@ -141,6 +141,64 @@ export const goals = pgTable("goals", {
   linkedAssetId: integer("linked_asset_id")
 });
 
+// ---------- loans ----------
+/**
+ * Informal loans between people — the 34 lakh owed to a brother, the money a
+ * cousin owes you. Not a credit facility: no interest, no schedule, no
+ * amortisation. Those belong to institutions and this product does not track
+ * them (see CLAUDE.md).
+ *
+ * One table serves both directions because they are the same shape seen from
+ * either end. `direction` says which:
+ *   owed_by_us  — we borrowed; this reduces net worth
+ *   owed_to_us  — we lent;     this increases net worth
+ *
+ * The counterparty is free text, not a `person_id`. `persons` means members of
+ * this household who spending is tagged to; a brother in another house is not
+ * one, and forcing him in there would put him in every spending breakdown.
+ */
+export const loans = pgTable("loans", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id),
+  direction: text("direction").notNull(), // owed_by_us | owed_to_us
+  counterparty: text("counterparty").notNull(),
+  principal: numeric("principal", { precision: 14, scale: 2 }).notNull(),
+  startedOn: date("started_on").notNull(),
+  dueOn: date("due_on"),
+  note: text("note"),
+  /**
+   * Settled loans are kept, never deleted — the history of who lent what is
+   * the point. `settledOn` is set when the balance reaches zero.
+   */
+  status: text("status").notNull().default("open"), // open | settled
+  settledOn: date("settled_on"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+}, (t) => ({
+  byHousehold: index("loans_household").on(t.householdId, t.status)
+}));
+
+/**
+ * Money moving against a loan, in either direction.
+ *
+ * `transactionId` is optional on purpose. A repayment made from a tracked
+ * account should point at the real ledger row so balances stay correct, but
+ * cash handed over in person never touches an account and still has to be
+ * recordable — refusing to record it would push people back to a notebook.
+ */
+export const loanPayments = pgTable("loan_payments", {
+  id: serial("id").primaryKey(),
+  loanId: integer("loan_id").notNull().references(() => loans.id),
+  amount: numeric("amount", { precision: 14, scale: 2 }).notNull(),
+  paidOn: date("paid_on").notNull(),
+  note: text("note"),
+  transactionId: integer("transaction_id").references(() => transactions.id),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+}, (t) => ({
+  byLoan: index("loan_payments_loan").on(t.loanId)
+}));
+
 export const goalContributions = pgTable("goal_contributions", {
   id: serial("id").primaryKey(),
   goalId: integer("goal_id").notNull().references(() => goals.id),

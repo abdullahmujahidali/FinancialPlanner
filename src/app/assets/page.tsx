@@ -8,6 +8,7 @@ import { pkr, todayStr } from "@/lib/money";
 import { Plus, Building2, ChevronRight, MoreHorizontal } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { getBalances } from "@/lib/balances";
+import { getLoanNet } from "@/lib/loans";
 import ConfirmDelete from "@/components/ConfirmDelete";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +16,19 @@ export const dynamic = "force-dynamic";
 export default async function AssetsPage({ searchParams }: { searchParams: Promise<{ e?: string }> }) {
   const sp = await searchParams;
   const { household } = await requireContext();
-  const assets = await db().select().from(t.assets)
+  const rows = await db().select().from(t.assets)
     .where(eq(t.assets.householdId, household.id)).orderBy(desc(t.assets.purchaseDate));
+  /**
+   * Sold assets sink to the bottom regardless of purchase date. They are
+   * history — what the household still owns is what the page is for, and a
+   * recently sold car sitting above a live plot buries the thing being looked
+   * for. Within each group the newest purchase still leads.
+   */
+  const assets = [...rows].sort((a, b) => {
+    const soldA = a.status === "sold" ? 1 : 0;
+    const soldB = b.status === "sold" ? 1 : 0;
+    return soldA - soldB;
+  });
 
   const values = new Map<number, { latest: number; history: { valuedOn: string; value: string }[] }>();
   for (const a of assets) {
@@ -36,7 +48,10 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
    * bank, which made the headline figure quietly wrong.
    */
   const { total: cash, incomplete: cashUnknown } = await getBalances(household.id);
-  const netWorth = assetTotal + cash;
+  // Debts are part of the picture too: money owed out is not wealth, and money
+  // owed in is. Only what is still outstanding counts.
+  const { weOwe, owedToUs, net: loanNet } = await getLoanNet(household.id);
+  const netWorth = assetTotal + cash + loanNet;
   const byYear = new Map<string, typeof assets>();
   for (const a of assets) {
     const y = a.purchaseDate.slice(0, 4);
@@ -81,6 +96,27 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
             </div>
           </div>
         </div>
+
+        {/* Only shown once a loan exists — an empty row of zeroes would just be
+            noise for a household that lends nothing. */}
+        {(weOwe > 0 || owedToUs > 0) && (
+          <Link href="/loans" className="mt-3 block rounded-[14px] bg-ink2 px-4 py-3 transition hover:opacity-80">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="eyebrow text-white/40">Loans</span>
+              <span
+                className={
+                  "money text-[19px] font-extrabold " + (loanNet < 0 ? "text-blush" : "text-acid")
+                }
+              >
+                {loanNet < 0 ? "−" : "+"}
+                {pkr(Math.abs(loanNet), { compact: true })}
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] font-bold text-white/40">
+              {pkr(weOwe, { compact: true })} owed out · {pkr(owedToUs, { compact: true })} owed in
+            </p>
+          </Link>
+        )}
       </section>
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start">

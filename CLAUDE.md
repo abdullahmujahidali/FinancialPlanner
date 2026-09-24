@@ -22,7 +22,11 @@ collapse without it).
 - Assets carry purchase date/price + value history (`asset_values`); net worth = latest
   value per active asset. 90-day revaluation nudge on dashboard. Goals can convert to
   assets on completion (the live case: selling the Corolla to fund a ~45-lakh car).
-- No liabilities module by design ("collect, then buy").
+- Informal loans only (`loans` + `loan_payments`): money owed to or by *people*,
+  in both directions, with no interest or schedule. Still no institutional debt —
+  no credit cards, mortgages or amortisation ("collect, then buy"). Outstanding
+  balances move net worth both ways; repayments are transfers, never spend, and
+  may optionally write a real ledger row so account balances stay right.
 
 ## Import pipeline (src/lib/meezan.ts + src/lib/rules.ts + src/actions/importer.ts)
 Meezan CSV: preamble rows (opening/closing balance) then `Booking Date,...` header.
