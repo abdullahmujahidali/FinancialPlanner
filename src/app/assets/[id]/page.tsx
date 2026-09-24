@@ -105,7 +105,8 @@ export default async function AssetDetailPage({
           </h1>
         </div>
       }
-      action={<ConfirmDelete id={asset.id} label={asset.name} action={deleteAsset} />}
+      action={<ConfirmDelete id={asset.id} label={asset.name} action={deleteAsset} noun="asset"
+        consequence="Its value history and any photos go with it — selling keeps all of that." />}
     >
       {/* ── Current value ────────────────────────────────────────────────── */}
       <section className="zone-ink mb-5">
@@ -260,7 +261,8 @@ export default async function AssetDetailPage({
               from the assets that remain.
             </p>
             <div className="mt-4">
-              <ConfirmDelete id={asset.id} label={asset.name} action={deleteAsset} />
+              <ConfirmDelete id={asset.id} label={asset.name} action={deleteAsset} noun="asset"
+        consequence="Its value history and any photos go with it — selling keeps all of that." />
             </div>
           </section>
         </div>

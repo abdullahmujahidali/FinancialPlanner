@@ -176,7 +176,7 @@ export default function LedgerTable({
                     >
                       <Pencil size={14} strokeWidth={2.2} />
                     </Link>
-                    <ConfirmDelete id={tx.id} label={name} action={deleteTransaction} />
+                    <ConfirmDelete id={tx.id} label={name} action={deleteTransaction} noun="transaction" />
                   </span>
                 </Td>
               </tr>

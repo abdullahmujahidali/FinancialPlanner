@@ -207,7 +207,7 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
                         <ExternalLink size={14} strokeWidth={2.2} />
                         <span className="hidden sm:inline">View</span>
                       </a>
-                      <ConfirmDelete id={f.id} label={f.filename} action={deleteAttachment} />
+                      <ConfirmDelete id={f.id} label={f.filename} action={deleteAttachment} noun="file" />
                     </div>
                   </div>
                 );

@@ -292,6 +292,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                           id={tx.id}
                           label={tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense")}
                           action={deleteTransaction}
+                          noun="transaction"
                         />
                       </div>
                     </details>
@@ -309,6 +310,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                         id={tx.id}
                         label={tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense")}
                         action={deleteTransaction}
+                        noun="transaction"
                       />
                     </span>
                   </div>

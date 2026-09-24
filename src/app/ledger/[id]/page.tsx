@@ -180,7 +180,7 @@ export default async function EditEntryPage({
           <p className="text-[14px] text-muted">
             Delete this entry permanently, along with its receipts. It cannot be undone.
           </p>
-          <ConfirmDelete id={tx.id} label={label} action={deleteTransaction} />
+          <ConfirmDelete id={tx.id} label={label} action={deleteTransaction} noun="transaction" />
         </div>
       </section>
     </Shell>

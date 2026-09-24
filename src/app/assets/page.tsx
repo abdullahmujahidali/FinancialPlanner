@@ -191,7 +191,8 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                             every valuation on it.
                           </p>
                           <div className="mt-2 flex justify-end">
-                            <ConfirmDelete id={a.id} label={a.name} action={deleteAsset} />
+                            <ConfirmDelete id={a.id} label={a.name} action={deleteAsset} noun="asset"
+                              consequence="Its value history and any photos go with it — selling keeps all of that." />
                           </div>
                         </div>
                       </details>

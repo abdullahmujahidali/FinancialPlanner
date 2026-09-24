@@ -308,6 +308,12 @@ function LoanGroup({
                     action={deleteLoan}
                     id={l.id}
                     label={`${l.counterparty} — ${pkr(l.principal)}`}
+                    noun="loan"
+                    consequence={
+                      history.length > 0
+                        ? `The ${history.length} payment${history.length === 1 ? "" : "s"} on it go too, along with any ledger rows they wrote.`
+                        : undefined
+                    }
                   />
                 </div>
               </div>

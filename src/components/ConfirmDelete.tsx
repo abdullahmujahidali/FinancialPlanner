@@ -15,11 +15,25 @@ import { Trash2 } from "lucide-react";
 export default function ConfirmDelete({
   id,
   label,
-  action
+  action,
+  noun = "entry",
+  consequence
 }: {
   id: number;
   label: string;
   action: (formData: FormData) => void;
+  /**
+   * What is being deleted, in the words the page uses — "asset", "loan",
+   * "file". Titles the dialog and names the thing in the warning.
+   */
+  noun?: string;
+  /**
+   * What else goes with it, when deleting reaches further than the row
+   * itself. A loan takes its repayments and their ledger rows; an asset takes
+   * its value history. Silence about that is how people lose data they
+   * assumed was safe.
+   */
+  consequence?: string;
 }) {
   const state = useOverlayState();
 
@@ -41,13 +55,14 @@ export default function ConfirmDelete({
         <Modal.Container className="fixed inset-0 z-50 !w-screen !max-w-none flex items-center justify-center p-4">
           <Modal.Dialog className="w-full max-w-[400px] overflow-hidden rounded-[22px] bg-card p-0 shadow-soft">
             <Modal.Header className="bg-blush px-6 py-4">
-              <Modal.Heading className="eyebrow text-ink">Delete entry</Modal.Heading>
+              <Modal.Heading className="eyebrow text-ink">Delete {noun}</Modal.Heading>
             </Modal.Header>
 
             <Modal.Body className="px-6 py-5">
               <p className="text-[15px] font-bold text-ink">{label}</p>
               <p className="mt-2 text-[14px] text-muted">
-                This removes the transaction permanently. It cannot be undone.
+                {consequence ? `${consequence} ` : ""}
+                This removes the {noun} permanently. It cannot be undone.
               </p>
             </Modal.Body>
 
