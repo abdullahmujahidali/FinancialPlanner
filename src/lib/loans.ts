@@ -110,23 +110,35 @@ export async function getLoans(householdId: number): Promise<LoanTotals> {
  * history to render one line.
  */
 export async function getLoanNet(householdId: number) {
+  /**
+   * leftJoin + groupBy rather than a correlated subquery.
+   *
+   * The subquery form silently applied one loan's payment total to every row
+   * — the same trap that made category usage counts read zero. Aggregate over
+   * a join instead, where the grouping key does the correlating.
+   */
   const rows = await db()
     .select({
       direction: t.loans.direction,
       principal: t.loans.principal,
-      paid: sql<string>`coalesce((
-        select sum(p.amount) from ${t.loanPayments} p where p.loan_id = ${t.loans.id}
-      ),0)`
+      dueOn: t.loans.dueOn,
+      paid: sql<string>`coalesce(sum(${t.loanPayments.amount}),0)`
     })
     .from(t.loans)
-    .where(eq(t.loans.householdId, householdId));
+    .leftJoin(t.loanPayments, eq(t.loanPayments.loanId, t.loans.id))
+    .where(eq(t.loans.householdId, householdId))
+    .groupBy(t.loans.id, t.loans.direction, t.loans.principal, t.loans.dueOn);
 
+  const today = new Date().toISOString().slice(0, 10);
   let weOwe = 0;
   let owedToUs = 0;
+  let overdue = 0;
   for (const r of rows) {
     const outstanding = Math.max(0, Number(r.principal) - Number(r.paid));
     if (r.direction === "owed_by_us") weOwe += outstanding;
     else owedToUs += outstanding;
+    // A settled loan cannot be late, however long ago its date passed.
+    if (outstanding > 0 && r.dueOn && r.dueOn < today) overdue++;
   }
-  return { weOwe, owedToUs, net: owedToUs - weOwe };
+  return { weOwe, owedToUs, net: owedToUs - weOwe, overdue };
 }

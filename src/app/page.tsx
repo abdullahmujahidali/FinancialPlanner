@@ -105,7 +105,12 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   // Net worth is things owned plus money actually held, less what is owed out
   // and plus what is owed in — the same arithmetic the Assets page does.
   const { total: cash, incomplete: cashUnknown } = await getBalances(household.id);
-  const { net: loanNet } = await getLoanNet(household.id);
+  const {
+    net: loanNet,
+    weOwe,
+    owedToUs,
+    overdue: overdueLoans
+  } = await getLoanNet(household.id);
   const netWorth = assetTotal + cash + loanNet;
 
   // One grouped query for every goal's saved total, instead of one per goal.
@@ -303,6 +308,51 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               </span>
             </Link>
           </div>
+
+          {/*
+            Loans earn a tile only once one exists — a household that lends
+            nothing should not be shown a row of zeroes every morning. The
+            two sides are named separately because "I owe 34 lakh" and "I am
+            owed 5" are different facts, and a single net figure hides both.
+          */}
+          {(weOwe > 0 || owedToUs > 0) && (
+            <Link
+              href="/loans"
+              className="block rounded-[22px] bg-card px-6 py-6 transition hover:bg-page lg:px-7"
+            >
+              <span className="flex items-center justify-between gap-3">
+                <span className="eyebrow">Loans</span>
+                <ArrowRight size={17} strokeWidth={2.5} className="text-muted" />
+              </span>
+
+              <div className="mt-4 flex flex-wrap items-baseline gap-x-8 gap-y-3">
+                {weOwe > 0 && (
+                  <span className="block">
+                    <span className="block text-[12px] font-bold text-muted">You owe</span>
+                    <span className="money mt-1 block text-[24px] font-extrabold lg:text-[28px]">
+                      {pkr(weOwe, { compact: true })}
+                    </span>
+                  </span>
+                )}
+                {owedToUs > 0 && (
+                  <span className="block">
+                    <span className="block text-[12px] font-bold text-muted">Owed to you</span>
+                    <span className="money mt-1 block text-[24px] font-extrabold lg:text-[28px]">
+                      {pkr(owedToUs, { compact: true })}
+                    </span>
+                  </span>
+                )}
+              </div>
+
+              {overdueLoans > 0 && (
+                <span className="mt-4 block rounded-[12px] bg-blush px-3 py-2 text-[12px] font-bold text-ink">
+                  {overdueLoans === 1
+                    ? "One loan is past its due date"
+                    : `${overdueLoans} loans are past their due date`}
+                </span>
+              )}
+            </Link>
+          )}
 
           {/* ── Goals ────────────────────────────────────────────────────── */}
           <section className="zone-card">
