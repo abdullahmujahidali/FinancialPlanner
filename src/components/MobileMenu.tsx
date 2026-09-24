@@ -3,13 +3,23 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Menu as MenuIcon, X, Building2, Target, Inbox, Upload, Settings, LogOut, CalendarRange, FolderOpen
+  Menu as MenuIcon, X, Building2, Target, Inbox, Upload, Settings, LogOut, CalendarRange,
+  FolderOpen, Sparkles, HandCoins
 } from "lucide-react";
 
+/**
+ * Every route the bottom tab bar does not carry.
+ *
+ * This list is the ONLY way to reach these pages on a phone, so anything
+ * added to the sidebar has to be added here too — the two are separate lists
+ * and nothing enforces that they agree.
+ */
 const links = [
   { href: "/year", label: "Year overview", Icon: CalendarRange },
-  { href: "/assets", label: "Assets", Icon: Building2 },
+  { href: "/insights", label: "Insights", Icon: Sparkles },
   { href: "/goals", label: "Goals", Icon: Target },
+  { href: "/assets", label: "Assets", Icon: Building2 },
+  { href: "/loans", label: "Loans", Icon: HandCoins },
   { href: "/review", label: "Review queue", Icon: Inbox },
   { href: "/import", label: "Import bank CSV", Icon: Upload },
   { href: "/files", label: "Files & imports", Icon: FolderOpen },
