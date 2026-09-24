@@ -311,7 +311,9 @@ function LoanGroup({
                     noun="loan"
                     consequence={
                       history.length > 0
-                        ? `The ${history.length} payment${history.length === 1 ? "" : "s"} on it go too, along with any ledger rows they wrote.`
+                        ? history.length === 1
+                          ? "The payment on it goes too, along with any ledger row it wrote."
+                          : `All ${history.length} payments on it go too, along with any ledger rows they wrote.`
                         : undefined
                     }
                   />

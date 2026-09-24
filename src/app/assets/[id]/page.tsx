@@ -262,7 +262,7 @@ export default async function AssetDetailPage({
             </p>
             <div className="mt-4">
               <ConfirmDelete id={asset.id} label={asset.name} action={deleteAsset} noun="asset"
-        consequence="Its value history and any photos go with it — selling keeps all of that." />
+                consequence="Its value history and any photos go with it — selling keeps all of that." />
             </div>
           </section>
         </div>
