@@ -143,7 +143,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   // claim about that month rather than about now.
   const goalFc = new Map(
     m === monthKey()
-      ? (await getGoalForecasts(household.id, Number(household.monthlyBudget)))
+      ? (await getGoalForecasts(household.id, Number(household.monthlyBudget), household.excludeOneOffs))
           .map((f) => [f.goalId, f] as const)
       : []
   );
@@ -170,7 +170,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       .leftJoin(t.categories, eq(t.categories.id, t.transactions.categoryId))
       .where(inMonth)
       .orderBy(desc(t.transactions.txDate), desc(t.transactions.id)).limit(5),
-    getInsights(household.id, m, budget, household.incentivePct).catch(() => []),
+    getInsights(household.id, m, budget, household.incentivePct, household.excludeOneOffs).catch(() => []),
     // Regular payments not yet added this month are money already spoken
     // for — "left" overstates what can actually be spent until they are in.
     db().select({ v: sql<string>`coalesce(sum(${t.recurring.amount}), 0)` }).from(t.recurring)
@@ -206,12 +206,16 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   // A month still running has nothing "saved" yet — on the 2nd it would
   // otherwise claim the whole budget as savings and pay the incentive on it.
   const running = m >= monthKey();
-  const savings = Math.max(0, budget - spend);
+  // What is measured against the budget: everything, or everything but
+  // one-offs (household setting). `spend` stays the true total.
+  const exclude = household.excludeOneOffs;
+  const counted = exclude ? routine : spend;
+  const savings = Math.max(0, budget - counted);
   const incentive = Math.round(savings * household.incentivePct / 100);
   const routineIncentive = Math.round(Math.max(0, budget - routine) * household.incentivePct / 100);
   const reviewCount = Number(reviewRow.v);
-  const pct = budget > 0 ? Math.min(100, Math.round((spend / budget) * 100)) : 0;
-  const over = budget > 0 && spend > budget;
+  const pct = budget > 0 ? Math.min(100, Math.round((counted / budget) * 100)) : 0;
+  const over = budget > 0 && counted > budget;
 
   const staleDays = household.lastRevaluedAt
     ? Math.floor((Date.now() - new Date(household.lastRevaluedAt).getTime()) / 86400000)
@@ -234,7 +238,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   });
   const setupOpen = setup.filter((i) => !i.done);
   const pacePct = dayNow > 0 ? Math.min(100, (dayNow / daysInMonth) * 100) : 0;
-  const safeLeft = Math.max(0, budget - spend - committed);
+  const safeLeft = Math.max(0, budget - counted - committed);
   const status: { label: string; tone: string } =
     budget <= 0 ? { label: "No budget set", tone: "bg-page text-muted" }
     : over ? { label: "Over budget", tone: "bg-blush text-ink" }
@@ -296,7 +300,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="money text-[40px] font-extrabold leading-none tracking-[-0.04em] lg:text-[52px]">{pkr(spend)}</span>
-            <span className="text-[15px] font-semibold text-muted">spent of {pkr(budget, { compact: true })}</span>
+            <span className="text-[15px] font-semibold text-muted">
+              spent{exclude && oneOffs > 0 ? ` · ${pkr(counted, { compact: true })} counts against` : " of"} {pkr(budget, { compact: true })}
+            </span>
           </div>
 
           {/* The bar shows spend; the tick shows where spend "should" be by today. */}
@@ -310,7 +316,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <div className="mt-2 flex justify-between text-[12px] font-bold text-muted">
             <span>{pct}% used{running && dayNow > 0 ? ` · ${Math.round(pacePct)}% of the month gone` : ""}</span>
             <span className={over ? "text-over" : ""}>
-              {over ? `${pkr(spend - budget, { compact: true })} over` : `${pkr(budget - spend, { compact: true })} left`}
+              {over ? `${pkr(counted - budget, { compact: true })} over` : `${pkr(budget - counted, { compact: true })} left`}
             </span>
           </div>
 
@@ -321,11 +327,12 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 ? ["Safe per day", pkr(Math.round(safeLeft / Math.max(1, daysLeft)), { compact: true }), safeLeft > 0 ? "" : "text-over",
                   committed > 0 ? `after ${pkr(committed, { compact: true })} regular` : `${daysLeft} days left`]
                 : ["Kept", pkr(income - spend, { compact: true }), income - spend >= 0 ? "text-good" : "text-over", "income − spending"],
-              ["One-offs", pkr(oneOffs, { compact: true }), "", oneOffs > 0 ? `${pkr(routine, { compact: true })} without` : "none this month"],
+              ["One-offs", pkr(oneOffs, { compact: true }), "",
+                oneOffs === 0 ? "none this month" : exclude ? "not counted in budget" : `${pkr(routine, { compact: true })} without`],
               running
                 ? [`Incentive ${household.incentivePct}%`, "—", "text-muted", "at month end"]
                 : [`Incentive ${household.incentivePct}%`, pkr(incentive, { compact: true }), incentive > 0 ? "text-good" : "text-muted",
-                  over && oneOffs > 0 && routineIncentive > 0 ? `${pkr(routineIncentive, { compact: true })} without one-offs` : "of what's saved"]
+                  !exclude && over && oneOffs > 0 && routineIncentive > 0 ? `${pkr(routineIncentive, { compact: true })} without one-offs` : "of what's saved"]
             ].map(([label, value, tone, hint], i) => (
               <div key={i} className={"px-0 sm:px-4 " + (i % 4 !== 0 ? "sm:border-l sm:border-line" : "sm:pl-0")}>
                 <dt className="text-[11.5px] font-bold uppercase tracking-[0.06em] text-muted">{label}</dt>

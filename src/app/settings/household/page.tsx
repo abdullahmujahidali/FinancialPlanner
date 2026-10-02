@@ -81,6 +81,20 @@ export default async function HouseholdSettings() {
             </span>
           </label>
 
+          <label className={"flex items-start gap-3 rounded-[14px] bg-page p-4 " + (owner ? "cursor-pointer" : "opacity-70")}>
+            <input type="checkbox" name="excludeOneOffs" defaultChecked={household.excludeOneOffs} disabled={!owner}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded accent-ink" />
+            {/* A disabled box posts nothing; this keeps a member's save from flipping it. */}
+            {!owner && household.excludeOneOffs && <input type="hidden" name="excludeOneOffs" value="on" />}
+            <span>
+              <span className="block text-[14px] font-bold">Leave one-offs out of the budget</span>
+              <span className="mt-1 block text-[13px] text-muted">
+                Entries flagged one-off — a hospital bill, an aqiqah — still show in total spend, but don&rsquo;t
+                count against the budget, savings or incentive.{!owner && " The owner sets this."}
+              </span>
+            </span>
+          </label>
+
           <label className="block">
             <span className="eyebrow text-muted">Currency</span>
             <select

@@ -2,6 +2,7 @@ import { db, t } from "@/db/client";
 import { and, eq, gte, lt, sql } from "drizzle-orm";
 import { monthKey, monthLabelShort, monthRange, pkr } from "@/lib/money";
 import { getGoalForecasts } from "@/lib/forecast";
+import { budgetedSpend } from "@/lib/budget";
 
 /**
  * Insight detection.
@@ -19,6 +20,8 @@ import { getGoalForecasts } from "@/lib/forecast";
 
 export type Insight = {
   kind: "spike" | "creep" | "duplicate" | "streak" | "trend" | "goal";
+  /** The headline number, shown large — "+40%", "+Rs 12k/mo", "3×". */
+  value?: string;
   /** Ranking weight — roughly "how much money does this concern". */
   weight: number;
   title: string;
@@ -42,7 +45,8 @@ export async function getInsights(
   householdId: number,
   month: string,
   budget: number,
-  incentivePct: number
+  incentivePct: number,
+  excludeOneOffs = true
 ): Promise<Insight[]> {
   const { from, next } = monthRange(month);
   const H = eq(t.transactions.householdId, householdId);
@@ -93,13 +97,15 @@ export async function getInsights(
       .groupBy(t.transactions.description, t.transactions.amount, t.transactions.txDate)
       .having(sql`count(*) > 1`),
 
+    // Budget streaks measure what counts against the budget — the same rule
+    // Home uses for savings and the incentive.
     db()
       .select({
         m: sql<string>`to_char(${t.transactions.txDate}, 'YYYY-MM')`,
         total: sql<string>`sum(${t.transactions.amount})`
       })
       .from(t.transactions)
-      .where(and(H, spendOnly, gte(t.transactions.txDate, sixAgo), lt(t.transactions.txDate, next)))
+      .where(and(H, budgetedSpend(excludeOneOffs), gte(t.transactions.txDate, sixAgo), lt(t.transactions.txDate, next)))
       .groupBy(sql`1`)
   ]);
 
@@ -131,6 +137,7 @@ export async function getInsights(
     if (delta >= (single ? 40 : 25) && cur.v - avg >= MIN_AMOUNT) {
       out.push({
         kind: "spike",
+        value: `+${Math.round(delta)}%`,
         weight: cur.v - avg,
         title: single
           ? `${name} is up ${Math.round(delta)}% on last month`
@@ -150,6 +157,7 @@ export async function getInsights(
       if (rising && growth >= MIN_AMOUNT) {
         out.push({
           kind: "trend",
+          value: `+${compact(growth)}`,
           weight: growth,
           title: `${name} has climbed three months running`,
           detail: `${money(last4[0].v)} → ${money(last4[1].v)} → ${money(last4[2].v)} → ${money(last4[3].v)}. Up ${money(growth)} since ${last4[0].m}.`,
@@ -176,6 +184,7 @@ export async function getInsights(
       if (v - plan >= MIN_AMOUNT) {
         out.push({
           kind: "spike",
+          value: `+${compact(v - plan)}`,
           weight: (v - plan) * 1.2,
           title: `${p.name} is ${money(v - plan)} over its plan`,
           detail: `Planned ${money(plan)} for the month, spent ${money(v)} so far.`,
@@ -212,6 +221,7 @@ export async function getInsights(
     if (settled && step >= MIN_AMOUNT / 3 && pct(newAvg, oldAvg) >= 20) {
       out.push({
         kind: "creep",
+        value: `+${compact(step)}/mo`,
         weight: step * 6,
         title: `"${desc}" costs more than it used to`,
         detail: `It was about ${money(oldAvg)}, and has been ${money(newAvg)} for the last three months. That is ${money(step)} more every month, or ${money(step * 12)} a year.`,
@@ -227,6 +237,7 @@ export async function getInsights(
     if (amt < MIN_AMOUNT / 8) continue;
     out.push({
       kind: "duplicate",
+      value: `${n}×`,
       weight: amt * (n - 1) * 3,
       title: `${d.description} was charged ${n} times on the same day`,
       detail: `${n} × ${money(amt)} on ${d.txDate}. If that is a mistake it is worth ${money(amt * (n - 1))} back.`,
@@ -244,6 +255,7 @@ export async function getInsights(
     if (pct(cur.v, avg) >= 30 && cur.v - avg >= MIN_AMOUNT) {
       out.push({
         kind: "spike",
+        value: `+${Math.round(pct(cur.v, avg))}%`,
         weight: (cur.v - avg) * 0.8,
         title: `Spending tagged to ${name} is up ${Math.round(pct(cur.v, avg))}%`,
         detail: `${money(cur.v)} this month against a usual ${money(avg)}.`,
@@ -269,6 +281,7 @@ export async function getInsights(
       const share = (saved * incentivePct) / 100;
       out.push({
         kind: "streak",
+        value: `${streak} mo`,
         good: true,
         weight: saved,
         title: `Under budget ${streak} months running`,
@@ -283,11 +296,12 @@ export async function getInsights(
   // "this will take 31 months" is on the goals page already — an insight has
   // to be something the household would not otherwise see.
   if (budget > 0 && month === monthKey()) {
-    for (const f of await getGoalForecasts(householdId, budget)) {
+    for (const f of await getGoalForecasts(householdId, budget, excludeOneOffs)) {
       if (!f.deadline || f.deadline.onTrack || !f.etaMonth) continue;
       if (f.deadline.shortfall < MIN_AMOUNT) continue;
       out.push({
         kind: "goal",
+        value: `+${compact(f.deadline.shortfall)}/mo`,
         weight: f.deadline.shortfall * 6,
         title: `"${f.name}" will not make its deadline at this pace`,
         detail: `Saving ${money(f.pace)} a month puts it at ${monthLabelShort(
@@ -312,6 +326,10 @@ function money(n: number) {
   return pkr(Math.round(n));
 }
 
+function compact(n: number) {
+  return pkr(Math.round(n), { compact: true });
+}
+
 /**
  * A month in brief — the answers that need no history at all.
  *
@@ -331,7 +349,7 @@ export type MonthBrief = {
   abnormal: number;
   uncategorised: { count: number; total: number };
   needsReview: number;
-  categories: Array<{ id: number | null; name: string; total: number; count: number }>;
+  categories: Array<{ id: number | null; name: string; total: number; count: number; prev: number | null; plan: number | null }>;
   people: Array<{ id: number | null; name: string; total: number }>;
   biggest: Array<{ id: number; description: string; amount: number; txDate: string; category: string | null }>;
   /** Spend for the month before, when there is any. */
@@ -353,7 +371,7 @@ export async function getMonthBrief(householdId: number, month: string, budget: 
   const prevFrom = monthRange(monthKey(new Date(y, mo - 2, 1))).from;
   const sixAgo = monthRange(monthKey(new Date(y, mo - 7, 1))).from;
 
-  const [totals, cats, people, biggest, history] = await Promise.all([
+  const [totals, cats, people, biggest, history, prevCats] = await Promise.all([
     db()
       .select({
         spend: sql<string>`coalesce(sum(case when ${t.transactions.type} = 'expense' and not ${t.transactions.isPassthrough} then ${t.transactions.amount} end), 0)`,
@@ -371,14 +389,15 @@ export async function getMonthBrief(householdId: number, month: string, budget: 
       .select({
         id: t.transactions.categoryId,
         name: t.categories.name,
+        plan: t.categories.monthlyBudget,
         total: sql<string>`sum(${t.transactions.amount})`,
         count: sql<string>`count(*)`
       })
       .from(t.transactions)
       .leftJoin(t.categories, eq(t.categories.id, t.transactions.categoryId))
       .where(and(inMonth, spendOnly))
-      .groupBy(t.transactions.categoryId, t.categories.name)
-      .orderBy(sql`3 desc`),
+      .groupBy(t.transactions.categoryId, t.categories.name, t.categories.monthlyBudget)
+      .orderBy(sql`4 desc`),
 
     db()
       .select({
@@ -413,7 +432,13 @@ export async function getMonthBrief(householdId: number, month: string, budget: 
       })
       .from(t.transactions)
       .where(and(H, spendOnly, gte(t.transactions.txDate, sixAgo), lt(t.transactions.txDate, from)))
-      .groupBy(sql`1`)
+      .groupBy(sql`1`),
+
+    db()
+      .select({ id: t.transactions.categoryId, total: sql<string>`sum(${t.transactions.amount})` })
+      .from(t.transactions)
+      .where(and(H, spendOnly, gte(t.transactions.txDate, prevFrom), lt(t.transactions.txDate, from)))
+      .groupBy(t.transactions.categoryId)
   ]);
 
   const tot = totals[0];
@@ -433,12 +458,17 @@ export async function getMonthBrief(householdId: number, month: string, budget: 
     abnormal: Number(tot?.abnormal ?? 0),
     uncategorised: { count: Number(tot?.uncatCount ?? 0), total: Number(tot?.uncatTotal ?? 0) },
     needsReview: Number(tot?.review ?? 0),
-    categories: cats.map((c) => ({
-      id: c.id,
-      name: c.name ?? "Uncategorised",
-      total: Number(c.total),
-      count: Number(c.count)
-    })),
+    categories: cats.map((c) => {
+      const p = prevCats.find((r) => r.id === c.id);
+      return {
+        id: c.id,
+        name: c.name ?? "Uncategorised",
+        total: Number(c.total),
+        count: Number(c.count),
+        prev: prev ? (p ? Number(p.total) : 0) : null,
+        plan: c.plan != null ? Number(c.plan) : null
+      };
+    }),
     people: people.map((p) => ({ id: p.id, name: p.name ?? "Whole household", total: Number(p.total) })),
     biggest: biggest.map((b) => ({
       id: b.id,

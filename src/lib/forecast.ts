@@ -1,5 +1,6 @@
 import { db, t } from "@/db/client";
 import { and, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { budgetedSpend } from "@/lib/budget";
 import { monthKey, monthLabelShort, pkr } from "@/lib/money";
 
 /**
@@ -65,7 +66,7 @@ export type GoalForecast = {
  * kept: a household that overspent in two of the last three months has not
  * been saving, and averaging that away would invent progress.
  */
-async function savingsHistory(householdId: number, budget: number) {
+async function savingsHistory(householdId: number, budget: number, excludeOneOffs: boolean) {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth() - WINDOW, 1);
   const from = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-01`;
@@ -80,8 +81,7 @@ async function savingsHistory(householdId: number, budget: number) {
     .where(
       and(
         eq(t.transactions.householdId, householdId),
-        eq(t.transactions.type, "expense"),
-        eq(t.transactions.isPassthrough, false),
+        budgetedSpend(excludeOneOffs),
         gte(t.transactions.txDate, from),
         lt(t.transactions.txDate, thisMonth)
       )
@@ -122,7 +122,8 @@ function monthsBetween(a: string, b: string) {
 
 export async function getGoalForecasts(
   householdId: number,
-  budget: number
+  budget: number,
+  excludeOneOffs = true
 ): Promise<GoalForecast[]> {
   const goals = await db()
     .select()
@@ -133,7 +134,7 @@ export async function getGoalForecasts(
   // `goal_contributions` carries no household_id of its own — it is tenanted
   // through its parent goal, so the ids are constrained here.
   const [history, contribRows] = await Promise.all([
-    budget > 0 ? savingsHistory(householdId, budget) : Promise.resolve([]),
+    budget > 0 ? savingsHistory(householdId, budget, excludeOneOffs) : Promise.resolve([]),
     db()
       .select({
         goalId: t.goalContributions.goalId,

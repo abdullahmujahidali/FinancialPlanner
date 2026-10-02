@@ -27,7 +27,9 @@ export async function updateHousehold(formData: FormData) {
     name: String(formData.get("name") || household.name),
     currency: String(formData.get("currency") || household.currency),
     monthlyBudget: Number(formData.get("monthlyBudget") || 0).toFixed(2),
-    incentivePct
+    incentivePct,
+    // Decides what the incentive is paid on, so it is the owner's call too.
+    excludeOneOffs: role === "owner" ? formData.get("excludeOneOffs") === "on" : household.excludeOneOffs
   } as any)).where(eq(t.households.id, household.id));
   revalidatePath("/settings", "layout"); revalidatePath("/");
 }

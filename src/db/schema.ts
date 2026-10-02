@@ -9,6 +9,11 @@ export const households = pgTable("households", {
   currency: text("currency").notNull().default("PKR"),
   monthlyBudget: numeric("monthly_budget", { precision: 14, scale: 2 }).notNull().default("0"),
   incentivePct: integer("incentive_pct").notNull().default(10),
+  /**
+   * One-offs (a hospital bill, an aqiqah) are left out of the budget, savings
+   * and incentive when true. Total spend always includes them.
+   */
+  excludeOneOffs: boolean("exclude_one_offs").notNull().default(true),
   lastRevaluedAt: date("last_revalued_at"),
   createdAt: timestamp("created_at").notNull().defaultNow()
 });

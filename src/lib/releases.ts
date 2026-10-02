@@ -13,6 +13,20 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-10-02-b",
+    date: "2 October 2026",
+    title: "One-offs no longer cost the incentive",
+    items: [
+      {
+        text: "Entries flagged one-off (a hospital bill, an aqiqah) still show in total spend, but no longer count against the budget, savings or incentive.",
+        href: "/?m=2026-09"
+      },
+      { text: "Year is now numbers first: spent, income, kept, average per month, incentive earned, and a month-by-month table.", href: "/year" },
+      { text: "Insights shows the month as figures — budget used, one-offs, month-end pace — and each finding leads with its number.", href: "/insights" },
+      { text: "A cleaner Home: one card style, everything in equal rows." }
+    ]
+  },
+  {
     id: "2026-10-02",
     date: "2 October 2026",
     title: "Your feedback, built in",

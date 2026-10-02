@@ -42,7 +42,7 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
   ]);
   const leftover = Math.round(Number(flow.income) - Number(flow.out) - Number(swept[0].v));
 
-  const forecasts = await getGoalForecasts(household.id, Number(household.monthlyBudget));
+  const forecasts = await getGoalForecasts(household.id, Number(household.monthlyBudget), household.excludeOneOffs);
   const fc = new Map(forecasts.map((f) => [f.goalId, f]));
   // Every ETA assumes the whole monthly saving goes to that one goal, so with
   // more than one goal open the dates cannot all be true at once. Say so once,
