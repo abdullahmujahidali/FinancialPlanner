@@ -1,6 +1,7 @@
 import Shell from "@/components/Shell";
 import EmptyState from "@/components/EmptyState";
 import { requireContext } from "@/lib/session";
+import { getNamer } from "@/lib/payees";
 import { db, t } from "@/db/client";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { resolveReview } from "@/actions/ledger";
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ReviewPage() {
   const { user, household } = await requireContext();
+  const nameOf = await getNamer(household.id);
 
   /**
    * The review queue is a fixed slice of the household's transactions, so the
@@ -100,13 +102,15 @@ export default async function ReviewPage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <div className="truncate text-[15px] font-bold">
-                    {tx.description || "(no description)"}
+                    {nameOf(tx.description, "(no description)")}
                   </div>
                   <div className="mt-0.5 truncate text-[12px] font-semibold text-muted">
-                    <span className="num">{tx.txDate}</span>
+                    {new Date(tx.txDate + "T00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                     {" · "}
                     {accountName.get(tx.accountId) ?? "Unknown account"}
                   </div>
+                  {/* The bank's own words stay visible: they are what the rule matches. */}
+                  <div className="mt-0.5 truncate text-[11.5px] font-medium text-muted/80" title={tx.description}>{tx.description}</div>
                 </div>
                 <span
                   className={
@@ -120,6 +124,10 @@ export default async function ReviewPage() {
 
               {/* Line 2 — the whole decision, on one wrapping line. */}
               <div className="mt-3 flex flex-wrap items-center gap-3">
+                {tx.description && (
+                  <input name="payee" placeholder="Name (optional), e.g. Milkman" aria-label="Payee name"
+                    className="field w-auto min-w-[150px] flex-1 py-2 text-[14px] sm:w-[200px] sm:flex-none" />
+                )}
                 <select
                   name="categoryId"
                   className="field w-auto min-w-[150px] max-w-full flex-1 py-2 text-[14px] sm:w-[180px] sm:flex-none"

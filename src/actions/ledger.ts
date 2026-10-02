@@ -178,6 +178,13 @@ export async function resolveReview(formData: FormData) {
     categoryId, personId, isPassthrough, isAbnormal, needsReview: false, reviewNote: null
   } as any)).where(and(eq(t.transactions.householdId, household.id), eq(t.transactions.id, id))).returning();
 
+  // Naming the payee while reviewing: the moment the row is being looked at.
+  const payeeName = String(formData.get("payee") || "").trim();
+  if (payeeName && tx?.description) {
+    await db().insert(t.payees).values({ householdId: household.id, match: tx.description, name: payeeName })
+      .onConflictDoUpdate({ target: [t.payees.householdId, t.payees.match], set: { name: payeeName } });
+  }
+
   // "remember this" -> new import rule from a stable slice of the description
   if (formData.get("remember") === "on" && tx) {
     const pattern = String(formData.get("pattern") || "").trim().toUpperCase()
