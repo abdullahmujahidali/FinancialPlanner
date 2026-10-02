@@ -15,7 +15,10 @@ import { Check, ArrowRight, CircleAlert } from "lucide-react";
  * never be ticked turns the card into permanent nagging. History builds up on
  * its own, one month at a time.
  */
-export default async function SetupChecklist({
+export type SetupItem = { done: boolean; title: string; why: string; href: string; cta: string };
+
+/** What is and isn't set up, as data — Home renders it inside its To do card. */
+export async function getSetupItems({
   householdId,
   reviewCount,
   goalsWithoutSavings,
@@ -38,7 +41,7 @@ export default async function SetupChecklist({
       .where(and(eq(t.transactions.householdId, H), eq(t.transactions.type, "expense"), isNull(t.transactions.categoryId)))
   ]);
 
-  const items: Array<{ done: boolean; title: string; why: string; href: string; cta: string }> = [
+  const items: SetupItem[] = [
     {
       done: missing.length === 0,
       title: "Set opening balances",
@@ -78,6 +81,16 @@ export default async function SetupChecklist({
     }
   ];
 
+  return items;
+}
+
+export default async function SetupChecklist(props: {
+  householdId: number;
+  reviewCount: number;
+  goalsWithoutSavings: number;
+  activeGoals: number;
+}) {
+  const items = await getSetupItems(props);
   const open = items.filter((i) => !i.done);
   if (open.length === 0) return null;
   const doneCount = items.length - open.length;

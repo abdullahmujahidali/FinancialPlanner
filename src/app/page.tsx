@@ -1,21 +1,20 @@
 import Link from "next/link";
 import Shell from "@/components/Shell";
-import CategoryDot from "@/components/CategoryDot";
 import BarChart from "@/components/BarChart";
-import Donut from "@/components/Donut";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import RegularDue from "@/components/RegularDue";
-import SetupChecklist from "@/components/SetupChecklist";
+import { getSetupItems } from "@/components/SetupChecklist";
 import WhatsNew from "@/components/WhatsNew";
 import SpendPace from "@/components/SpendPace";
 import { getInsights } from "@/lib/insights";
+import { prettyDescription } from "@/lib/describe";
 import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
 import { getBalances } from "@/lib/balances";
 import { getGoalForecasts, etaLabel } from "@/lib/forecast";
 import { getLoanNet } from "@/lib/loans";
-import { ChevronLeft, ChevronRight, ArrowRight, Plus, Upload, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowRight, Plus, Upload } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -157,7 +156,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const prevKey = monthKey(new Date(py, pmo - 2, 1));
   const prevFrom = monthRange(prevKey).from;
   const spendExpr = and(H, eq(t.transactions.type, "expense"), eq(t.transactions.isPassthrough, false));
-  const [dailyRows, recent, topInsights] = await Promise.all([
+  const [dailyRows, recent, topInsights, [dueRow]] = await Promise.all([
     db().select({
       d: sql<string>`to_char(${t.transactions.txDate}, 'YYYY-MM-DD')`,
       v: sql<string>`sum(${t.transactions.amount})`
@@ -171,8 +170,15 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       .leftJoin(t.categories, eq(t.categories.id, t.transactions.categoryId))
       .where(inMonth)
       .orderBy(desc(t.transactions.txDate), desc(t.transactions.id)).limit(5),
-    getInsights(household.id, m, budget, household.incentivePct).catch(() => [])
+    getInsights(household.id, m, budget, household.incentivePct).catch(() => []),
+    // Regular payments not yet added this month are money already spoken
+    // for — "left" overstates what can actually be spent until they are in.
+    db().select({ v: sql<string>`coalesce(sum(${t.recurring.amount}), 0)` }).from(t.recurring)
+      .where(and(eq(t.recurring.householdId, household.id), eq(t.recurring.isArchived, false),
+        eq(t.recurring.type, "expense"), eq(t.recurring.isPassthrough, false),
+        sql`(${t.recurring.lastMonth} is null or ${t.recurring.lastMonth} < ${m})`))
   ]);
+  const committed = m === monthKey() ? Number(dueRow?.v ?? 0) : 0;
   const cumulative = (key: string, days: number) => {
     const out: number[] = [];
     let run = 0;
@@ -215,8 +221,30 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const prev = mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, "0")}`;
   const nextM = mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, "0")}`;
 
-  const catData = byCategory.map((c) => ({ name: c.name ?? "Uncategorised", value: Number(c.total) }));
+  // Latest entries and the per-person list share a column beside goals; when
+  // neither has anything to show, goals take the full width.
+  const hasSide = recent.length > 0 || byPerson.some((p) => p.name);
 
+
+  const setup = await getSetupItems({
+    householdId: household.id,
+    reviewCount,
+    activeGoals: activeGoals.length,
+    goalsWithoutSavings: activeGoals.filter((g) => !((goalSums.get(g.id) ?? 0) > 0)).length
+  });
+  const setupOpen = setup.filter((i) => !i.done);
+  const pacePct = dayNow > 0 ? Math.min(100, (dayNow / daysInMonth) * 100) : 0;
+  const safeLeft = Math.max(0, budget - spend - committed);
+  const status: { label: string; tone: string } =
+    budget <= 0 ? { label: "No budget set", tone: "bg-page text-muted" }
+    : over ? { label: "Over budget", tone: "bg-blush text-ink" }
+    : running && pct > pacePct + 5 ? { label: "Ahead of pace", tone: "bg-blush/60 text-ink" }
+    : { label: running ? "On track" : "Within budget", tone: "bg-acid text-ink" };
+
+  const card = "rounded-[20px] bg-card p-5 lg:p-6";
+  const head = "mb-4 flex items-center justify-between gap-3";
+  const h2 = "text-[13px] font-extrabold uppercase tracking-[0.08em] text-ink";
+  const more = "text-[12px] font-bold text-muted transition hover:text-ink";
 
   return (
     <Shell
@@ -225,26 +253,24 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       action={
         <div className="flex shrink-0 items-center gap-1">
           <Link href={`/?m=${prev}`} aria-label="Previous month"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-ink transition hover:bg-page">
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-ink transition hover:bg-line">
             <ChevronLeft size={18} strokeWidth={2.5} />
           </Link>
           <span className="whitespace-nowrap px-2 text-[13px] font-bold">{monthLabelShort(m)}</span>
           <Link href={`/?m=${nextM}`} aria-label="Next month"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-ink transition hover:bg-page">
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-ink transition hover:bg-line">
             <ChevronRight size={18} strokeWidth={2.5} />
           </Link>
         </div>
       }
     >
-      {/* A line that greets the person and says where the month stands, so
-          the page opens with a sentence rather than a wall of figures. */}
       <div className="-mt-2 mb-5 flex flex-wrap items-center justify-between gap-3">
         <p className="text-[15px] font-semibold text-muted">
           {firstName ? `Salaam, ${firstName}. ` : ""}
           {m === nowKey
-            ? `Day ${dayNow} of ${daysInMonth}${budget > 0 ? (spend <= budget
-              ? ` — ${pkr(Math.round((budget - spend) / daysLeft))} a day keeps the month in budget.`
-              : " — the budget is already used up.") : "."}`
+            ? budget > 0 && !over
+              ? `${pkr(Math.round(safeLeft / Math.max(1, daysLeft)))} a day keeps ${monthLabel(m).split(" ")[0]} in budget.`
+              : over ? "The budget is used up for this month." : `Day ${dayNow} of ${daysInMonth}.`
             : m < nowKey ? `Looking back at ${monthLabel(m)}.` : `${monthLabel(m)} hasn't started.`}
         </p>
         <div className="flex gap-2">
@@ -253,444 +279,291 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </div>
       </div>
 
-      {/* Changes announce themselves — shown once per device per release. */}
-      <div className="mb-5"><WhatsNew /></div>
+      <WhatsNew />
 
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
-        <div className="flex flex-col gap-5 lg:w-[56%] lg:shrink-0 xl:w-[58%]">
-
-          {/* ── Hero zone: the month's spend against budget ──────────────── */}
-          <section className={over ? "zone-blush" : "zone-acid"}>
-            <span className="eyebrow">Spent · {monthLabel(m)}</span>
-            <div className="money-xl mt-4 text-[60px] lg:text-[84px]">{pkr(spend)}</div>
-
-            <div className="mt-7 h-2.5 overflow-hidden rounded-full bg-ink/15">
-              <div className={"h-full rounded-full " + (over ? "hatch" : "bg-ink")} style={{ width: `${pct}%` }} />
-            </div>
-            <div className="mt-3 flex justify-between text-[13px] font-bold">
-              <span>{pct}% of {pkr(budget, { compact: true })} budget</span>
-              <span>
-                {over
-                  ? `Over by ${pkr(spend - budget, { compact: true })}`
-                  : `${pkr(budget - spend, { compact: true })} left`}
-              </span>
-            </div>
-            {oneOffs > 0 && (
-              <p className="mt-3 text-[13px] font-semibold text-ink/70">
-                {pkr(oneOffs, { compact: true })} of this was one-offs. Without them the month
-                came to {pkr(routine, { compact: true })}
-                {budget > 0 && (routine <= budget
-                  ? `, ${pkr(budget - routine, { compact: true })} under budget.`
-                  : `, still ${pkr(routine - budget, { compact: true })} over.`)}
-              </p>
-            )}
-          </section>
-
-          {/* ── Three-up figures, black zone ─────────────────────────────── */}
-          <section className="zone-ink !py-7">
-            <div className="grid grid-cols-3 gap-3 sm:gap-4">
-              {[
-                ["Income", pkr(income, { compact: true }), "text-white", null],
-                running
-                  ? ["Left", pkr(savings, { compact: true }), "text-white",
-                    over ? "budget exceeded" : `of ${pkr(budget, { compact: true })} budget`]
-                  : ["Saved", pkr(savings, { compact: true }), "text-white",
-                    over ? "budget exceeded" : `of ${pkr(budget, { compact: true })} budget`],
-                running
-                  ? [`Incentive ${household.incentivePct}%`, "—", "text-white/40",
-                    "settled at month end"]
-                  : [
-                    `Incentive ${household.incentivePct}%`,
-                    pkr(incentive, { compact: true }),
-                    over ? "text-white/40" : "text-acid",
-                    // A zero here is a real result, not a bug — say which. When
-                    // one-offs caused it, show what they cost, so the household
-                    // can decide whether a hospital bill should cost the incentive.
-                    over && oneOffs > 0 && routineIncentive > 0
-                      ? `${pkr(routineIncentive, { compact: true })} without one-offs`
-                      : over ? "nothing saved this month" : `${household.incentivePct}% of what's saved`
-                  ]
-              ].map(([label, value, tone, hint], i) => (
-                <div key={i}>
-                  <div className="eyebrow text-white/45">{label}</div>
-                  <div className={"money mt-2 whitespace-nowrap text-[17px] font-bold sm:text-[22px] lg:text-[26px] " + tone}>{value}</div>
-                  {hint && <div className="mt-1 hidden text-[11px] font-semibold leading-snug text-white/35 sm:block">{hint}</div>}
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* ── What isn't set up yet, and what that costs ─────────────── */}
-          <SetupChecklist
-            householdId={household.id}
-            reviewCount={reviewCount}
-            activeGoals={activeGoals.length}
-            goalsWithoutSavings={activeGoals.filter((g) => !((goalSums.get(g.id) ?? 0) > 0)).length}
-          />
-
-          {/* Early in a month there is nothing to show yet — the month just
-              closed is what people are asking about, so point straight at it. */}
-          {m === nowKey && lastDaily && spend === 0 && (
-            <Link href={`/insights?m=${prevKey}`}
-              className="flex items-center justify-between gap-3 rounded-[22px] bg-card px-6 py-5 transition hover:bg-line">
-              <span>
-                <span className="eyebrow block text-muted">{monthLabel(prevKey)}</span>
-                <span className="mt-1 block text-[17px] font-extrabold">
-                  {pkr(lastDaily[lastDaily.length - 1])} spent
-                  {budget > 0 && <span className="text-muted"> of {pkr(budget, { compact: true })}</span>}
-                </span>
-                <span className="mt-0.5 block text-[13px] font-semibold text-muted">See where it went and what changed</span>
-              </span>
-              <ArrowRight size={18} strokeWidth={2.5} className="shrink-0" />
-            </Link>
-          )}
-
-          {/* ── Regular payments still to add this month ───────────────── */}
-          {m === monthKey() && <RegularDue householdId={household.id} month={m} />}
-
-          {/* ── Alerts ───────────────────────────────────────────────────── */}
-          {reviewCount > 0 && (
-            <Link href="/review"
-              className="flex items-center justify-between gap-3 rounded-[18px] bg-blush px-6 py-5 text-[15px] font-bold transition hover:bg-blushdim">
-              <span>{reviewCount} transaction{reviewCount > 1 ? "s" : ""} waiting for review</span>
-              <ArrowRight size={19} strokeWidth={2.5} />
-            </Link>
-          )}
-          {staleDays !== null && staleDays > 90 && (
-            <Link href="/assets"
-              className="flex items-center justify-between gap-3 rounded-[18px] bg-card px-6 py-5 text-[15px] font-bold transition hover:bg-page">
-              <span>Asset values {staleDays} days old — quarterly check due</span>
-              <ArrowRight size={19} strokeWidth={2.5} />
-            </Link>
-          )}
-
-          {/* ── The month's pace against the budget ─────────────────────── */}
-          {dayNow > 0 && (
-            <section className="zone-card">
-              <h2 className="eyebrow mb-4">Spending through {monthLabelShort(m)}</h2>
-              <SpendPace daily={daily} lastDaily={lastDaily} budget={budget}
-                daysInMonth={daysInMonth} today={dayNow} />
-            </section>
-          )}
-
-          {/* ── Income vs spend — only once there is more than one month ── */}
-          {trend.length > 1 && (
-            <section className="zone-card">
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="eyebrow">Income vs spend</h2>
-                <div className="flex items-center gap-4 text-[12px] font-bold">
-                  <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-acid" />In</span>
-                  <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-ink" />Out</span>
-                </div>
-              </div>
-              <BarChart data={trend} current={currentLabel} />
-            </section>
-          )}
-
-          {/*
-            ── Money on hand and net worth ──────────────────────────────────
-            Two different questions, so two figures rather than one with a
-            footnote. "What can I spend right now" is asked far more often
-            than "what am I worth", and it is the one a ledger can answer to
-            the rupee — so it leads, and links to the accounts behind it.
-          */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Link
-              href="/settings/accounts"
-              className="block rounded-[22px] bg-acid px-6 py-6 text-ink transition hover:bg-aciddim lg:px-7"
-            >
-              <span className="flex items-center justify-between gap-3">
-                <span className="eyebrow">Money on hand</span>
-                <ArrowRight size={17} strokeWidth={2.5} />
-              </span>
-              <span className="money-xl mt-3 block text-[32px] lg:text-[38px]">
-                {pkr(cash, { compact: true })}
-              </span>
-              <span className="mt-2 block text-[12px] font-bold">
-                {cashUnknown
-                  ? "Some accounts have no opening balance — set them to make this exact"
-                  : "Across every account, kept current by the ledger"}
-              </span>
-            </Link>
-
-            <Link
-              href="/assets"
-              className="block rounded-[22px] bg-ink px-6 py-6 text-white transition hover:bg-ink2 lg:px-7"
-            >
-              <span className="flex items-center justify-between gap-3">
-                <span className="eyebrow text-white/45">Net worth</span>
-                <ArrowRight size={17} strokeWidth={2.5} />
-              </span>
-              <span className="money-xl mt-3 block text-[32px] text-acid lg:text-[38px]">
-                {pkr(netWorth, { compact: true })}
-              </span>
-              <span className="mt-2 block text-[12px] font-semibold text-white/50">
-                {pkr(assetTotal, { compact: true })} owned + money on hand
-                {loanNet !== 0 && (loanNet < 0 ? " − loans" : " + loans")}
-              </span>
-            </Link>
+      {/*
+        One card language throughout: white cards, the same header, colour
+        only where it means something (lime = on track / progress, blush =
+        over). Rows are equal-height pairs so nothing leaves a hole.
+      */}
+      <div className="grid gap-4 lg:grid-cols-12 lg:gap-5">
+        {/* ── The month ─────────────────────────────────────────────────── */}
+        <section className={card + " lg:col-span-8"}>
+          <div className={head}>
+            <h2 className={h2}>{monthLabel(m)}{running && dayNow > 0 ? ` · day ${dayNow} of ${daysInMonth}` : ""}</h2>
+            <span className={"rounded-full px-3 py-1 text-[12px] font-bold " + status.tone}>{status.label}</span>
           </div>
 
-          {/*
-            Loans earn a tile only once one exists — a household that lends
-            nothing should not be shown a row of zeroes every morning. The
-            two sides are named separately because "I owe 34 lakh" and "I am
-            owed 5" are different facts, and a single net figure hides both.
-          */}
-          {(weOwe > 0 || owedToUs > 0) && (
-            <Link
-              href="/loans"
-              className="block rounded-[22px] bg-card px-6 py-6 transition hover:bg-page lg:px-7"
-            >
-              <span className="flex items-center justify-between gap-3">
-                <span className="eyebrow">Loans</span>
-                <ArrowRight size={17} strokeWidth={2.5} className="text-muted" />
-              </span>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="money text-[40px] font-extrabold leading-none tracking-[-0.04em] lg:text-[52px]">{pkr(spend)}</span>
+            <span className="text-[15px] font-semibold text-muted">spent of {pkr(budget, { compact: true })}</span>
+          </div>
 
-              <div className="mt-4 flex flex-wrap items-baseline gap-x-8 gap-y-3">
-                {weOwe > 0 && (
-                  <span className="block">
-                    <span className="block text-[12px] font-bold text-muted">You owe</span>
-                    <span className="money mt-1 block text-[24px] font-extrabold lg:text-[28px]">
-                      {pkr(weOwe, { compact: true })}
-                    </span>
-                  </span>
-                )}
-                {owedToUs > 0 && (
-                  <span className="block">
-                    <span className="block text-[12px] font-bold text-muted">Owed to you</span>
-                    <span className="money mt-1 block text-[24px] font-extrabold lg:text-[28px]">
-                      {pkr(owedToUs, { compact: true })}
-                    </span>
-                  </span>
-                )}
-              </div>
-
-              {overdueLoans > 0 && (
-                <span className="mt-4 block rounded-[12px] bg-blush px-3 py-2 text-[12px] font-bold text-ink">
-                  {overdueLoans === 1
-                    ? "One loan is past its due date"
-                    : `${overdueLoans} loans are past their due date`}
-                </span>
-              )}
-            </Link>
-          )}
-
-          {/* ── Goals ────────────────────────────────────────────────────── */}
-          <section className="zone-card">
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <h2 className="eyebrow">Goals</h2>
-              <Link href="/goals" className="text-[12px] font-bold text-muted transition hover:text-ink">
-                {activeGoals.length > 0 ? "Manage" : "Add a goal"}
-              </Link>
-            </div>
-            {activeGoals.length === 0 ? (
-              <p className="text-[14px] leading-relaxed text-muted">
-                No savings goals yet. Set one — a car, a plot, an emergency fund — and its progress
-                shows here every time you open the app.
-              </p>
-            ) : (
-              <div className="space-y-5">
-                {activeGoals.map((g) => {
-                  const saved = goalSums.get(g.id) ?? 0;
-                  const gp = Math.min(100, Math.round((saved / Number(g.targetAmount)) * 100));
-                  return (
-                    <Link key={g.id} href="/goals" className="block">
-                      <div className="flex justify-between text-[15px]">
-                        <span className="font-bold">{g.name}</span>
-                        <span className="num font-bold text-muted">
-                          {pkr(saved, { compact: true })} / {pkr(Number(g.targetAmount), { compact: true })}
-                        </span>
-                      </div>
-                      <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-page">
-                        <div className="h-full rounded-full bg-acid" style={{ width: `${gp}%` }} />
-                      </div>
-                      {(() => {
-                        const f = goalFc.get(g.id);
-                        if (!f?.etaMonth) return null;
-                        const late = f.deadline && !f.deadline.onTrack;
-                        return (
-                          <div className="mt-2 text-[12px] font-bold text-muted">
-                            {late ? (
-                              <span className="text-ink">
-                                {etaLabel(f.etaMonth)} — {etaLabel(f.deadline!.month)} target
-                              </span>
-                            ) : (
-                              <>on track for {etaLabel(f.etaMonth)}</>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </Link>
-                  );
-                })}
-              </div>
+          {/* The bar shows spend; the tick shows where spend "should" be by today. */}
+          <div className="relative mt-5 h-3 rounded-full bg-page">
+            <div className={"h-full rounded-full " + (over ? "bg-blush" : "bg-acid")} style={{ width: `${pct}%` }} />
+            {running && dayNow > 0 && (
+              <span className="absolute -top-1 h-5 w-[3px] rounded-full bg-ink" style={{ left: `calc(${pacePct}% - 1.5px)` }}
+                title="Where spending would be at an even pace" />
             )}
-          </section>
-        </div>
+          </div>
+          <div className="mt-2 flex justify-between text-[12px] font-bold text-muted">
+            <span>{pct}% used{running && dayNow > 0 ? ` · ${Math.round(pacePct)}% of the month gone` : ""}</span>
+            <span className={over ? "text-over" : ""}>
+              {over ? `${pkr(spend - budget, { compact: true })} over` : `${pkr(budget - spend, { compact: true })} left`}
+            </span>
+          </div>
 
-        {/* ── Right column: where it went ─────────────────────────────────── */}
-        <div className="flex flex-col gap-5 lg:min-w-0 lg:flex-1">
-          {topInsights.length > 0 && (
-            <Link href={`/insights?m=${m}`}
-              className={"block rounded-[22px] px-6 py-5 transition lg:px-7 " +
-                (topInsights[0].good ? "bg-acid hover:bg-aciddim" : "bg-ink text-white hover:bg-ink2")}>
-              <span className="flex items-center justify-between gap-3">
-                <span className={"eyebrow flex items-center gap-2 " + (topInsights[0].good ? "" : "text-acid")}>
-                  <Sparkles size={13} strokeWidth={2.6} /> Worth a look
-                </span>
-                <span className={"text-[12px] font-bold " + (topInsights[0].good ? "text-ink/60" : "text-white/50")}>
-                  {topInsights.length > 1 ? `+${topInsights.length - 1} more` : ""} <ArrowRight size={14} className="inline" />
-                </span>
-              </span>
-              <span className="mt-2 block text-[17px] font-extrabold leading-snug tracking-[-0.02em]">
-                {topInsights[0].title}
-              </span>
-              <span className={"mt-1 block text-[13px] font-medium leading-relaxed " +
-                (topInsights[0].good ? "text-ink/70" : "text-white/60")}>{topInsights[0].detail}</span>
-            </Link>
-          )}
-
-          {recent.length > 0 && (
-            <section className="zone-card">
-              <div className="flex items-baseline justify-between">
-                <h2 className="eyebrow">Latest entries</h2>
-                <Link href={`/ledger?m=${m}`} className="text-[12px] font-bold text-muted hover:text-ink">All →</Link>
+          <dl className="mt-6 grid grid-cols-2 gap-y-4 border-t border-line pt-5 sm:grid-cols-4">
+            {[
+              ["Income", pkr(income, { compact: true }), "", running ? "so far" : "this month"],
+              running
+                ? ["Safe per day", pkr(Math.round(safeLeft / Math.max(1, daysLeft)), { compact: true }), safeLeft > 0 ? "" : "text-over",
+                  committed > 0 ? `after ${pkr(committed, { compact: true })} regular` : `${daysLeft} days left`]
+                : ["Kept", pkr(income - spend, { compact: true }), income - spend >= 0 ? "text-good" : "text-over", "income − spending"],
+              ["One-offs", pkr(oneOffs, { compact: true }), "", oneOffs > 0 ? `${pkr(routine, { compact: true })} without` : "none this month"],
+              running
+                ? [`Incentive ${household.incentivePct}%`, "—", "text-muted", "at month end"]
+                : [`Incentive ${household.incentivePct}%`, pkr(incentive, { compact: true }), incentive > 0 ? "text-good" : "text-muted",
+                  over && oneOffs > 0 && routineIncentive > 0 ? `${pkr(routineIncentive, { compact: true })} without one-offs` : "of what's saved"]
+            ].map(([label, value, tone, hint], i) => (
+              <div key={i} className={"px-0 sm:px-4 " + (i % 4 !== 0 ? "sm:border-l sm:border-line" : "sm:pl-0")}>
+                <dt className="text-[11.5px] font-bold uppercase tracking-[0.06em] text-muted">{label}</dt>
+                <dd className={"money mt-1 text-[20px] font-extrabold " + tone}>{value}</dd>
+                <dd className="text-[11.5px] font-semibold text-muted">{hint}</dd>
               </div>
-              <ul className="mt-2">
-                {recent.map((r, i) => (
-                  <li key={r.id} className={i < recent.length - 1 ? "rule-row" : ""}>
-                    <Link href={`/ledger/${r.id}`}
-                      className="-mx-2 flex items-center justify-between gap-3 rounded-[12px] px-2 py-3 transition hover:bg-page">
-                      <span className="min-w-0">
-                        <span className="block truncate text-[14px] font-semibold">
-                          {r.description || r.category || (r.type === "income" ? "Income" : "Entry")}
+            ))}
+          </dl>
+        </section>
+
+        {/* ── To do ─────────────────────────────────────────────────────── */}
+        <section className={card + " lg:col-span-4"}>
+          <div className={head}>
+            <h2 className={h2}>To do</h2>
+            {setupOpen.length > 0 && (
+              <span className="text-[12px] font-bold text-muted">{setup.length - setupOpen.length} of {setup.length} set up</span>
+            )}
+          </div>
+          <ul className="-mx-2">
+            {reviewCount > 0 && (
+              <TodoRow href="/review" dot="bg-blush" title={`${reviewCount} ${reviewCount === 1 ? "entry" : "entries"} to review`} why="Imported rows that need a category." />
+            )}
+            {m === nowKey && lastDaily && spend === 0 && (
+              <TodoRow href={`/insights?m=${prevKey}`} dot="bg-acid" title={`Review ${monthLabel(prevKey)}`}
+                why={`${pkr(lastDaily[lastDaily.length - 1], { compact: true })} spent — where it went and what changed.`} />
+            )}
+            {topInsights[0] && (
+              <TodoRow href={`/insights?m=${m}`} dot={topInsights[0].good ? "bg-acid" : "bg-blush"} title={topInsights[0].title} why={topInsights[0].detail} />
+            )}
+            {staleDays !== null && staleDays > 90 && (
+              <TodoRow href="/assets" dot="bg-blush" title="Revalue assets" why={`Values are ${staleDays} days old.`} />
+            )}
+            {setupOpen.map((i) => (
+              <TodoRow key={i.title} href={i.href} dot="border-2 border-muted/60" title={i.title} why={i.why} />
+            ))}
+            {reviewCount === 0 && setupOpen.length === 0 && !topInsights[0] && (
+              <li className="px-2 py-6 text-center text-[14px] font-semibold text-muted">Nothing waiting. All set up.</li>
+            )}
+          </ul>
+        </section>
+
+        {m === nowKey && (
+          <div className="lg:col-span-12 empty:hidden">
+            <RegularDue householdId={household.id} month={m} />
+          </div>
+        )}
+
+        {/* ── Pace ──────────────────────────────────────────────────────── */}
+        <section className={card + " lg:col-span-8"}>
+          <div className={head}>
+            <h2 className={h2}>Spending pace</h2>
+            <Link href={`/insights?m=${m}`} className={more}>Insights →</Link>
+          </div>
+          {dayNow > 0 ? (
+            <SpendPace daily={daily} lastDaily={lastDaily} budget={budget} daysInMonth={daysInMonth} today={dayNow} />
+          ) : (
+            <p className="py-10 text-center text-[14px] font-semibold text-muted">This month hasn&rsquo;t started.</p>
+          )}
+        </section>
+
+        {/* ── Categories ────────────────────────────────────────────────── */}
+        <section className={card + " lg:col-span-4"}>
+          <div className={head}>
+            <h2 className={h2}>Categories</h2>
+            <Link href={byCategory.some((c) => c.plan != null) ? `/ledger?m=${m}` : "/settings/budget"} className={more}>
+              {byCategory.some((c) => c.plan != null) ? "Ledger →" : "Set budgets →"}
+            </Link>
+          </div>
+          {byCategory.length === 0 ? (
+            <p className="py-10 text-center text-[14px] font-semibold text-muted">No spending yet this month.</p>
+          ) : (
+            <ul className="space-y-3.5">
+              {byCategory.map((c, i) => {
+                const total = Number(c.total);
+                const plan = c.plan != null ? Number(c.plan) : null;
+                const width = plan ? Math.min(100, (total / plan) * 100) : spend > 0 ? (total / spend) * 100 : 0;
+                const overPlan = plan != null && total > plan;
+                return (
+                  <li key={i}>
+                    <Link href={`/ledger?m=${m}${c.id ? `&cat=${c.id}` : ""}`} className="block">
+                      <div className="flex items-baseline justify-between gap-3 text-[14px]">
+                        <span className="truncate font-semibold">{c.name ?? "Uncategorised"}</span>
+                        <span className="num shrink-0 font-bold">
+                          {pkr(total, { compact: true })}
+                          {plan != null && <span className="font-semibold text-muted"> / {pkr(plan, { compact: true })}</span>}
                         </span>
-                        <span className="text-[12px] font-bold text-muted">
-                          {new Date(r.txDate + "T00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                          {r.type === "transfer" ? " · transfer" : r.category ? ` · ${r.category}` : r.type === "expense" ? " · no category" : ""}
-                        </span>
-                      </span>
-                      <span className={"num shrink-0 text-[14px] font-bold " + (r.type === "income" ? "text-good" : r.type === "transfer" ? "text-muted" : "")}>
-                        {r.type === "income" ? "+" : ""}{pkr(Number(r.amount))}
-                      </span>
+                      </div>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-page">
+                        <div className={"h-full rounded-full " + (overPlan ? "bg-over" : plan != null ? "bg-ink" : "bg-ink/60")}
+                          style={{ width: `${width}%` }} />
+                      </div>
                     </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        {/* ── Latest entries ────────────────────────────────────────────── */}
+        <section className={card + " lg:col-span-8"}>
+          <div className={head}>
+            <h2 className={h2}>Latest entries</h2>
+            <Link href={`/ledger?m=${m}`} className={more}>All →</Link>
+          </div>
+          {recent.length === 0 ? (
+            <p className="py-8 text-center text-[14px] font-semibold text-muted">Nothing entered this month yet.</p>
+          ) : (
+            <ul className="-mx-2">
+              {recent.map((r) => (
+                <li key={r.id}>
+                  <Link href={`/ledger/${r.id}`} className="flex items-center justify-between gap-3 rounded-[12px] px-2 py-2.5 transition hover:bg-page">
+                    <span className="min-w-0">
+                      <span className="block truncate text-[14px] font-semibold">
+                        {prettyDescription(r.description || r.category || (r.type === "income" ? "Income" : "Entry"))}
+                      </span>
+                      <span className="text-[12px] font-semibold text-muted">
+                        {new Date(r.txDate + "T00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                        {r.type === "transfer" ? " · transfer" : r.category ? ` · ${r.category}` : r.type === "expense" ? " · no category" : ""}
+                      </span>
+                    </span>
+                    <span className={"num shrink-0 text-[14px] font-bold " + (r.type === "income" ? "text-good" : r.type === "transfer" ? "text-muted" : "")}>
+                      {r.type === "income" ? "+" : ""}{pkr(Number(r.amount))}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {/* ── Position: cash, net worth, loans ──────────────────────────── */}
+        <section className={card + " lg:col-span-4"}>
+          <div className={head}>
+            <h2 className={h2}>Your position</h2>
+          </div>
+          <ul className="-mx-2">
+            <PositionRow href="/settings/accounts" label="Money on hand" value={pkr(cash, { compact: true })}
+              note={cashUnknown ? "Opening balance missing" : "All accounts"} warn={cashUnknown} />
+            <PositionRow href="/assets" label="Net worth" value={pkr(netWorth, { compact: true })}
+              note={`${pkr(assetTotal, { compact: true })} in assets`} />
+            {(weOwe > 0 || owedToUs > 0) && (
+              <PositionRow href="/loans" label="Loans" value={(loanNet < 0 ? "−" : "+") + pkr(Math.abs(loanNet), { compact: true })}
+                note={[weOwe > 0 && `you owe ${pkr(weOwe, { compact: true })}`, owedToUs > 0 && `owed ${pkr(owedToUs, { compact: true })}`].filter(Boolean).join(" · ") + (overdueLoans > 0 ? " · overdue" : "")}
+                warn={overdueLoans > 0} />
+            )}
+          </ul>
+          {byPerson.some((p) => p.name) && (
+            <>
+              <h3 className="mb-2 mt-5 text-[11.5px] font-bold uppercase tracking-[0.06em] text-muted">Spent on</h3>
+              <ul className="space-y-1.5">
+                {byPerson.map((p, i) => (
+                  <li key={i} className="flex justify-between text-[13.5px]">
+                    {p.id ? <Link href={`/people/${p.id}?m=${m}`} className="font-semibold hover:underline">{p.name}</Link>
+                      : <span className="font-semibold">Household</span>}
+                    <span className="num font-bold">{pkr(Number(p.total), { compact: true })}</span>
                   </li>
                 ))}
               </ul>
-            </section>
+            </>
           )}
+        </section>
 
-          {catData.length > 0 ? (
-            <section className="overflow-hidden rounded-[22px] bg-card">
-              <div className="bg-card px-6 pb-8 pt-6 lg:px-8">
-                <h2 className="eyebrow">Where it went</h2>
-                <div className="mt-5">
-                  <Donut data={catData} total={spend} label="Total spent" currency={household.currency} />
-                </div>
-              </div>
-
-              <ul className="px-6 py-2 lg:px-8">
-                {byCategory.map((c, i) => {
-                  const label = c.name ?? "Uncategorised";
-                  const total = Number(c.total);
-                  const share = spend > 0 ? Math.round((total / spend) * 100) : 0;
-                  // With a plan set, the row answers "how much of it is gone"
-                  // rather than "what share of the month was this".
-                  const plan = c.plan != null ? Number(c.plan) : null;
-                  const used = plan ? Math.min(100, (total / plan) * 100) : 0;
-                  const overPlan = plan != null && total > plan;
-                  return (
-                    <li key={i} className={i < byCategory.length - 1 ? "rule-row" : ""}>
-                      <Link href={`/ledger?m=${m}${c.id ? `&cat=${c.id}` : ""}`}
-                        className="-mx-2 block rounded-[12px] px-2 py-3.5 transition hover:bg-page">
-                        <span className="flex items-center justify-between gap-3 text-[15px]">
-                          <span className="flex min-w-0 items-center gap-3 font-semibold">
-                            <CategoryDot name={label} index={i} />
-                            <span className="truncate">{label}</span>
-                            {plan == null && <span className="shrink-0 text-[12px] font-bold text-muted">{share}%</span>}
-                          </span>
-                          <span className="num shrink-0 font-bold">
-                            {pkr(total)}
-                            {plan != null && <span className="font-semibold text-muted"> / {pkr(plan, { compact: true })}</span>}
-                          </span>
-                        </span>
-                        {plan != null && (
-                          <span className="mt-2 flex items-center gap-3 pl-6">
-                            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-page">
-                              <span className={"block h-full rounded-full " + (overPlan ? "bg-over" : "bg-ink")}
-                                style={{ width: `${used}%` }} />
-                            </span>
-                            <span className={"shrink-0 text-[12px] font-bold " + (overPlan ? "text-over" : "text-muted")}>
-                              {overPlan ? `${pkr(total - plan, { compact: true })} over` : `${pkr(plan - total, { compact: true })} left`}
-                            </span>
-                          </span>
-                        )}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-
-              {!byCategory.some((c) => c.plan != null) && (
-                <Link href="/settings/budget"
-                  className="flex items-center justify-between gap-3 border-t border-line px-6 py-4 text-[13px] font-bold text-muted transition hover:bg-page hover:text-ink lg:px-8">
-                  <span>Give each category its own budget — e.g. Petrol Rs 40,000</span>
-                  <ArrowRight size={16} strokeWidth={2.5} />
-                </Link>
-              )}
-              {byCategory.some((c) => !c.name) && reviewCount > 0 && (
-                <Link href="/review"
-                  className="flex items-center justify-between gap-3 bg-acid px-6 py-4 text-[13px] font-bold transition hover:bg-aciddim lg:px-8">
-                  <span>Categorise {reviewCount} entries to sharpen this</span>
-                  <ArrowRight size={17} strokeWidth={2.5} />
-                </Link>
-              )}
-            </section>
+        {/* ── Goals ─────────────────────────────────────────────────────── */}
+        <section className={card + " lg:col-span-12"}>
+          <div className={head}>
+            <h2 className={h2}>Goals</h2>
+            <Link href="/goals" className={more}>{activeGoals.length > 0 ? "Manage →" : "Add a goal →"}</Link>
+          </div>
+          {activeGoals.length === 0 ? (
+            <p className="text-[14px] text-muted">No savings goals yet — a car, a plot, an emergency fund.</p>
           ) : (
-            <section className="zone-card">
-              <p className="text-[14px] font-semibold text-muted">No spending recorded this month yet.</p>
-            </section>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {activeGoals.map((g) => {
+                const saved = goalSums.get(g.id) ?? 0;
+                const gp = Math.min(100, Math.round((saved / Number(g.targetAmount)) * 100));
+                const f = goalFc.get(g.id);
+                return (
+                  <Link key={g.id} href="/goals" className="rounded-[14px] bg-page p-4 transition hover:bg-line">
+                    <div className="truncate text-[14px] font-bold">{g.name}</div>
+                    <div className="num mt-1 text-[12.5px] font-semibold text-muted">
+                      {pkr(saved, { compact: true })} of {pkr(Number(g.targetAmount), { compact: true })}
+                    </div>
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-card">
+                      <div className="h-full rounded-full bg-ink" style={{ width: `${gp}%` }} />
+                    </div>
+                    <div className="mt-2 text-[12px] font-bold text-muted">
+                      {f?.etaMonth ? (f.deadline && !f.deadline.onTrack ? `late — ${etaLabel(f.etaMonth)}` : `on track for ${etaLabel(f.etaMonth)}`) : `${gp}% saved`}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           )}
+        </section>
 
-          {byPerson.some((p) => p.name) && (
-            <section className="zone-card">
-              <h2 className="eyebrow">By person</h2>
-              {/* Someone with only reimbursed spending shows nothing here, which
-                  looks like a bug unless we say why. */}
-              <p className="mb-3 mt-2 text-[13px] leading-relaxed text-muted">
-                Spending tagged to each person. Reimbursed bills are left out, so a
-                person only appears once something was actually paid for them.
-              </p>
-              <ul>
-                {byPerson.map((p, i) => {
-                  const row = (
-                    <>
-                      <span className="font-semibold">{p.name ?? "Household"}</span>
-                      <span className="num font-bold">{pkr(Number(p.total))}</span>
-                    </>
-                  );
-                  const cls =
-                    "flex items-center justify-between gap-3 py-4 text-[15px] " +
-                    (i < byPerson.length - 1 ? "rule-row " : "");
-                  return (
-                    <li key={i}>
-                      {p.id ? (
-                        <Link href={`/people/${p.id}?m=${m}`} className={cls + "-mx-2 rounded-[12px] px-2 transition hover:bg-page"}>
-                          {row}
-                        </Link>
-                      ) : (
-                        <div className={cls}>{row}</div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          )}
-
-        </div>
+        {trend.length > 1 && (
+          <section className={card + " lg:col-span-12"}>
+            <div className={head}>
+              <h2 className={h2}>Income vs spend</h2>
+              <div className="flex items-center gap-4 text-[12px] font-bold">
+                <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-acid" />In</span>
+                <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-ink" />Out</span>
+              </div>
+            </div>
+            <BarChart data={trend} current={currentLabel} />
+          </section>
+        )}
       </div>
     </Shell>
+  );
+}
+
+function TodoRow({ href, dot, title, why }: { href: string; dot: string; title: string; why: string }) {
+  return (
+    <li>
+      <Link href={href} className="flex items-start gap-3 rounded-[12px] px-2 py-2.5 transition hover:bg-page">
+        <span className={"mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full " + dot} />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-bold leading-snug">{title}</span>
+          <span className="mt-0.5 line-clamp-2 block text-[12.5px] font-medium leading-snug text-muted">{why}</span>
+        </span>
+        <ArrowRight size={15} strokeWidth={2.4} className="mt-1 shrink-0 text-muted" />
+      </Link>
+    </li>
+  );
+}
+
+function PositionRow({ href, label, value, note, warn }: { href: string; label: string; value: string; note: string; warn?: boolean }) {
+  return (
+    <li>
+      <Link href={href} className="flex items-center justify-between gap-3 rounded-[12px] px-2 py-2.5 transition hover:bg-page">
+        <span className="min-w-0">
+          <span className="block text-[13.5px] font-bold">{label}</span>
+          <span className={"block truncate text-[12px] font-semibold " + (warn ? "text-over" : "text-muted")}>{note}</span>
+        </span>
+        <span className="money shrink-0 text-[20px] font-extrabold">{value}</span>
+      </Link>
+    </li>
   );
 }
