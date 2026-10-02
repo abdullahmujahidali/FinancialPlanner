@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Menu as MenuIcon, X, Building2, Target, Inbox, Upload, Settings, LogOut, CalendarRange,
-  FolderOpen, HandCoins
+  FolderOpen, HandCoins, Gift
 } from "lucide-react";
 
 /**
@@ -22,7 +22,8 @@ const links = [
   { href: "/loans", label: "Loans", Icon: HandCoins },
   { href: "/import", label: "Import bank CSV", Icon: Upload },
   { href: "/files", label: "Files & imports", Icon: FolderOpen },
-  { href: "/settings", label: "Settings", Icon: Settings }
+  { href: "/settings", label: "Settings", Icon: Settings },
+  { href: "/whats-new", label: "What's new", Icon: Gift }
 ];
 
 /**

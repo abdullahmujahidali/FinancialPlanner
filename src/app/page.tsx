@@ -8,6 +8,7 @@ import { db, t } from "@/db/client";
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import RegularDue from "@/components/RegularDue";
 import SetupChecklist from "@/components/SetupChecklist";
+import WhatsNew from "@/components/WhatsNew";
 import SpendPace from "@/components/SpendPace";
 import { getInsights } from "@/lib/insights";
 import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
@@ -251,6 +252,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <Link href="/import" className="btn-quiet btn-sm gap-1.5"><Upload size={15} strokeWidth={2.4} /> Import</Link>
         </div>
       </div>
+
+      {/* Changes announce themselves — shown once per device per release. */}
+      <div className="mb-5"><WhatsNew /></div>
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
         <div className="flex flex-col gap-5 lg:w-[56%] lg:shrink-0 xl:w-[58%]">

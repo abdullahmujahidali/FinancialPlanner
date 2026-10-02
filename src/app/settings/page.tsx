@@ -4,7 +4,7 @@ import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { and, eq, sql } from "drizzle-orm";
 import { logout } from "@/actions/auth";
-import { Home, Landmark, Tags, Users, UserCog, Wand2, ChevronRight, LogOut, KeyRound, Repeat, PieChart } from "lucide-react";
+import { Home, Landmark, Tags, Users, UserCog, Wand2, ChevronRight, LogOut, KeyRound, Repeat, PieChart, Gift } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +88,13 @@ export default async function SettingsHub() {
       label: "Import rules",
       hint: "Auto-categorise imported bank rows",
       meta: plural(rules.v, "rule")
+    },
+    {
+      href: "/whats-new",
+      Icon: Gift,
+      label: "What's new",
+      hint: "Everything that changed in the app",
+      meta: ""
     },
     {
       href: "/settings/password",
