@@ -98,11 +98,11 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
             </p>
           </section>
           <section className="zone-card">
-            <h2 className="eyebrow">Older months are worth importing</h2>
+            <h2 className="eyebrow">Have older statements?</h2>
             <p className="mt-3 text-[14px] font-medium leading-relaxed text-muted">
-              Insights, the year view and goal dates all compare against earlier months. Import the last
-              two or three statements once and those pages have something to say straight away. Rows
-              already in the ledger are skipped, so overlapping dates are safe.
+              Optional. Insights and the year view build up history on their own, one month at a time.
+              If earlier statements are to hand, importing them just gets there sooner. Rows already in
+              the ledger are skipped, so overlapping dates are safe.
             </p>
           </section>
         </div>

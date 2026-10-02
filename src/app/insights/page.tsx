@@ -290,18 +290,21 @@ function People({ brief, month }: { brief: MonthBrief; month: string }) {
  * route; the bank already holds the history, so point at the import.
  */
 function NeedsHistory({ month }: { month: string }) {
-  const a = monthLabel(shiftMonth(month, -2)).split(" ")[0];
-  const b = monthLabel(shiftMonth(month, -1)).split(" ")[0];
+  const next = monthLabel(shiftMonth(month, 1)).split(" ")[0];
   return (
     <div className="zone-card">
       <p className="text-[15px] font-bold">Comparisons start once there is an earlier month to compare with.</p>
       <p className="mt-2 text-[14px] font-medium leading-relaxed text-muted">
-        There is no need to wait for it. Download the {a} and {b} statements from Meezan and
-        import them — spikes, rising bills and double charges show up here as soon as they are in.
+        This happens on its own — once {next} is in, spikes, rising bills and double charges
+        show up here. Until then, give categories their own budgets and anything that runs over
+        its plan is flagged straight away.
       </p>
-      <Link href="/import" className="btn mt-4 inline-flex gap-1.5">
-        Import older statements <ArrowRight size={15} />
-      </Link>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link href="/settings/budget" className="btn inline-flex gap-1.5">
+          Set category budgets <ArrowRight size={15} />
+        </Link>
+        <Link href="/import" className="btn-quiet">Have older statements? Import</Link>
+      </div>
     </div>
   );
 }

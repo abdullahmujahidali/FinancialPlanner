@@ -9,6 +9,11 @@ import { Check, ArrowRight, CircleAlert } from "lucide-react";
  * features — Tooba had never seen the budget breakdown or regular payments
  * because nothing pointed at them. Done items stay ticked so progress shows;
  * the whole card disappears once everything is done.
+ *
+ * Only things the household can actually finish belong here. "Import older
+ * statements" was dropped: not everyone can get them, and an item that can
+ * never be ticked turns the card into permanent nagging. History builds up on
+ * its own, one month at a time.
  */
 export default async function SetupChecklist({
   householdId,
@@ -22,33 +27,24 @@ export default async function SetupChecklist({
   activeGoals: number;
 }) {
   const H = householdId;
-  const [[noOpening], [plans], [regular], [months], [uncat]] = await Promise.all([
-    db().select({ v: sql<string>`count(*)` }).from(t.accounts)
+  const [missing, [plans], [regular], [uncat]] = await Promise.all([
+    db().select({ name: t.accounts.name }).from(t.accounts)
       .where(and(eq(t.accounts.householdId, H), eq(t.accounts.isArchived, false), isNull(t.accounts.openingBalance))),
     db().select({ v: sql<string>`count(*)` }).from(t.categories)
       .where(and(eq(t.categories.householdId, H), isNotNull(t.categories.monthlyBudget))),
     db().select({ v: sql<string>`count(*)` }).from(t.recurring)
       .where(and(eq(t.recurring.householdId, H), eq(t.recurring.isArchived, false))),
-    db().select({ v: sql<string>`count(distinct to_char(${t.transactions.txDate}, 'YYYY-MM'))` }).from(t.transactions)
-      .where(eq(t.transactions.householdId, H)),
     db().select({ v: sql<string>`count(*)` }).from(t.transactions)
       .where(and(eq(t.transactions.householdId, H), eq(t.transactions.type, "expense"), isNull(t.transactions.categoryId)))
   ]);
 
   const items: Array<{ done: boolean; title: string; why: string; href: string; cta: string }> = [
     {
-      done: Number(noOpening.v) === 0,
+      done: missing.length === 0,
       title: "Set opening balances",
-      why: `${noOpening.v} account${Number(noOpening.v) === 1 ? " has" : "s have"} none, so money on hand and net worth are guesses.`,
+      why: `${missing.map((a) => a.name).join(", ")} ${missing.length === 1 ? "has" : "have"} no starting balance, so money on hand and net worth are guesses.`,
       href: "/settings/accounts",
       cta: "Set balances"
-    },
-    {
-      done: Number(months.v) >= 3,
-      title: "Import older statements",
-      why: `Only ${months.v} month${Number(months.v) === 1 ? "" : "s"} of history. Insights and goal dates need about three to compare against.`,
-      href: "/import",
-      cta: "Import"
     },
     {
       done: Number(plans.v) > 0,
