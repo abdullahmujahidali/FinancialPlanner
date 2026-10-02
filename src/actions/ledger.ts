@@ -21,9 +21,13 @@ async function saveAttachment(householdId: number, file: File | null, ref: { tra
 
 export async function addTransaction(formData: FormData) {
   const { user, household } = await requireContext();
-  const type = String(formData.get("type") || "expense");
-  const amount = Number(formData.get("amount") || 0);
-  if (!amount || amount <= 0) redirect("/entry?e=Enter+an+amount");
+  // A refund is stored as a negative expense in the original's category, so
+  // every total, balance and budget nets it out with no special casing.
+  const refund = formData.get("type") === "refund";
+  const type = refund ? "expense" : String(formData.get("type") || "expense");
+  const entered = Number(formData.get("amount") || 0);
+  if (!entered || entered <= 0) redirect("/entry?e=Enter+an+amount");
+  const amount = refund ? -entered : entered;
   const accountId = Number(formData.get("accountId"));
   const counter = formData.get("counterAccountId");
   const categoryId = formData.get("categoryId") ? Number(formData.get("categoryId")) : null;
@@ -49,7 +53,7 @@ export async function addTransaction(formData: FormData) {
   // Confirm with the actual figure, not a bare "Saved." — and land on the
   // ledger where the new row is visible, so the entry is self-evidently there.
   const saved = new URLSearchParams({
-    saved: String(tx.amount),
+    saved: String(Math.abs(Number(tx.amount))),
     m: tx.txDate.slice(0, 7)
   });
   redirect(`/ledger?${saved.toString()}`);
@@ -67,9 +71,11 @@ export async function updateTransaction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!Number.isInteger(id) || id <= 0) return;
 
-  const type = String(formData.get("type") || "expense");
-  const amount = Number(formData.get("amount") || 0);
-  if (!amount || amount <= 0) redirect(`/ledger/${id}?e=Enter+an+amount`);
+  const refund = formData.get("type") === "refund";
+  const type = refund ? "expense" : String(formData.get("type") || "expense");
+  const entered = Number(formData.get("amount") || 0);
+  if (!entered || entered <= 0) redirect(`/ledger/${id}?e=Enter+an+amount`);
+  const amount = refund ? -entered : entered;
   const accountId = Number(formData.get("accountId"));
   if (!Number.isInteger(accountId) || accountId <= 0) redirect(`/ledger/${id}?e=Pick+an+account`);
   const counter = formData.get("counterAccountId");
@@ -94,11 +100,23 @@ export async function updateTransaction(formData: FormData) {
 
   if (!tx) redirect("/ledger");
 
+  // Payee name: set, change or clear the household's name for this bank text.
+  if (formData.has("payee") && tx.description) {
+    const name = String(formData.get("payee") || "").trim();
+    if (name) {
+      await db().insert(t.payees).values({ householdId: household.id, match: tx.description, name })
+        .onConflictDoUpdate({ target: [t.payees.householdId, t.payees.match], set: { name } });
+    } else {
+      await db().delete(t.payees)
+        .where(and(eq(t.payees.householdId, household.id), eq(t.payees.match, tx.description)));
+    }
+  }
+
   await saveAttachment(household.id, formData.get("receipt") as File | null, { transactionId: tx.id });
   revalidatePath("/"); revalidatePath("/ledger"); revalidatePath("/review"); revalidatePath("/year");
 
   const saved = new URLSearchParams({
-    saved: String(tx.amount),
+    saved: String(Math.abs(Number(tx.amount))),
     m: tx.txDate.slice(0, 7)
   });
   redirect(`/ledger?${saved.toString()}`);

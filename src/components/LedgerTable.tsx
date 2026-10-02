@@ -35,12 +35,15 @@ export type SortKey = "date" | "description" | "amount";
 
 export default function LedgerTable({
   rows,
+  titles,
   showYear = false,
   sort,
   dir,
   query
 }: {
   rows: LedgerRow[];
+  /** Display names (payee name or cleaned bank text), by entry id. */
+  titles?: Record<number, string>;
   /** Searches span months, so the date column needs the year. */
   showYear?: boolean;
   sort: SortKey;
@@ -65,6 +68,7 @@ export default function LedgerTable({
     return `/ledger?${q}`;
   };
   const label = (r: LedgerRow) =>
+    titles?.[r.tx.id] ||
     r.tx.description ||
     r.category ||
     (r.tx.type === "transfer" ? "Transfer" : r.tx.type === "income" ? "Income" : "Expense");

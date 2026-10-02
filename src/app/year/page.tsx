@@ -6,7 +6,7 @@ import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { pkr, monthKey } from "@/lib/money";
-import { prettyDescription } from "@/lib/describe";
+import { getNamer } from "@/lib/payees";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +21,7 @@ export const dynamic = "force-dynamic";
 export default async function YearOverview({ searchParams }: { searchParams: Promise<{ y?: string }> }) {
   const sp = await searchParams;
   const { household } = await requireContext();
+  const nameOf = await getNamer(household.id);
 
   const parsed = Number(sp.y);
   const year = Number.isInteger(parsed) && parsed > 1970 && parsed < 3000 ? parsed : new Date().getFullYear();
@@ -207,7 +208,7 @@ export default async function YearOverview({ searchParams }: { searchParams: Pro
                 <li key={b.id}>
                   <Link href={`/ledger/${b.id}`} className="flex items-center justify-between gap-3 rounded-[12px] px-2 py-2.5 transition hover:bg-page">
                     <span className="min-w-0">
-                      <span className="block truncate text-[14px] font-semibold">{prettyDescription(b.description) || "—"}</span>
+                      <span className="block truncate text-[14px] font-semibold">{nameOf(b.description, "—")}</span>
                       <span className="text-[12px] font-semibold text-muted">
                         {new Date(b.txDate + "T00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                         {b.category ? ` · ${b.category}` : ""}{b.oneOff ? " · one-off" : ""}

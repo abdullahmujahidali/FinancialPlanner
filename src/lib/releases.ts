@@ -23,7 +23,9 @@ export const RELEASES: Release[] = [
       },
       { text: "Year is now numbers first: spent, income, kept, average per month, incentive earned, and a month-by-month table.", href: "/year" },
       { text: "Insights shows the month as figures — budget used, one-offs, month-end pace — and each finding leads with its number.", href: "/insights" },
-      { text: "A cleaner Home: one card style, everything in equal rows." }
+      { text: "A cleaner Home: one card style, everything in equal rows." },
+      { text: "Refunds: choose Refund when adding an entry and it reduces that category's spending instead of counting as income.", href: "/entry" },
+      { text: "Name a payee once — open any entry and fill in Name (e.g. \"Milkman\") — and every entry from that bank description shows it.", href: "/ledger" }
     ]
   },
   {

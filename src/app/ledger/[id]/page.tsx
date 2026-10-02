@@ -8,6 +8,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { deleteTransaction, quickAddCategory, quickAddPerson, updateTransaction } from "@/actions/ledger";
 import SearchableSelect from "@/components/SearchableSelect";
 import FlagToggles from "@/components/FlagToggles";
+import { prettyDescription } from "@/lib/describe";
 import SubmitButton from "@/components/SubmitButton";
 import ConfirmDelete from "@/components/ConfirmDelete";
 
@@ -43,6 +44,12 @@ export default async function EditEntryPage({
 
   // Missing, or another household's — either way it is not theirs to see.
   if (!tx) notFound();
+  const [payee] = tx.description
+    ? await db().select({ name: t.payees.name }).from(t.payees)
+        .where(and(eq(t.payees.householdId, household.id), eq(t.payees.match, tx.description)))
+    : [];
+  // Refunds are negative expenses; the form shows them as a positive amount under "Refund".
+  const isRefund = tx.type === "expense" && Number(tx.amount) < 0;
 
   const label =
     tx.description || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense");
@@ -73,10 +80,12 @@ export default async function EditEntryPage({
         <input type="hidden" name="id" value={tx.id} />
 
         {/* type switch — rounded segmented pills */}
-        <div className="grid grid-cols-3 gap-1.5 rounded-full bg-card p-1.5">
-          {[["expense", "Expense"], ["income", "Income"], ["transfer", "Transfer"]].map(([v, label]) => (
+        <div className="grid grid-cols-4 gap-1 rounded-full bg-card p-1.5">
+          {[["expense", "Expense"], ["refund", "Refund"], ["income", "Income"], ["transfer", "Transfer"]].map(([v, label]) => (
             <label key={v}>
-              <input type="radio" name="type" value={v} defaultChecked={tx.type === v} className="peer sr-only" />
+              <input type="radio" name="type" value={v}
+                defaultChecked={v === "refund" ? isRefund : v === "expense" ? tx.type === "expense" && !isRefund : tx.type === v}
+                className="peer sr-only" />
               <span className="block cursor-pointer rounded-full py-2.5 text-center text-[14px] font-bold transition peer-checked:bg-ink peer-checked:text-acid">
                 {label}
               </span>
@@ -96,7 +105,7 @@ export default async function EditEntryPage({
             min="1"
             placeholder="0"
             required
-            defaultValue={Number(tx.amount)}
+            defaultValue={Math.abs(Number(tx.amount))}
             className="money-xl mt-3 w-full border-0 bg-transparent p-0 text-[56px] outline-none placeholder:text-ink/25 lg:text-[72px]"
           />
         </div>
@@ -147,8 +156,21 @@ export default async function EditEntryPage({
             />
           </div>
 
+          {/* A name for this payee applies to every entry with the same bank
+              text, past and future — the bank's wording itself is kept. */}
+          {tx.description && (
+            <label className="block lg:col-span-2">
+              <span className="eyebrow text-muted">Name</span>
+              <input name="payee" defaultValue={payee?.name ?? ""} placeholder={prettyDescription(tx.description)}
+                className="field mt-2" />
+              <span className="mt-1.5 block text-[12.5px] text-muted">
+                e.g. &ldquo;Milkman&rdquo; — used for every entry with this bank description. Bank text: {tx.description}
+              </span>
+            </label>
+          )}
+
           <label className="block lg:col-span-2">
-            <span className="eyebrow text-muted">Note</span>
+            <span className="eyebrow text-muted">{tx.source === "import" ? "Bank description" : "Note"}</span>
             <input name="description" defaultValue={tx.description ?? ""} placeholder="Optional" className="field mt-2" />
           </label>
         </div>

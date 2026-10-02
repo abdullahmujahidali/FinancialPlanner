@@ -5,7 +5,7 @@ import { Card, CardHead, Stat, StatRow, BarRow, Pill } from "@/components/ui";
 import { requireContext } from "@/lib/session";
 import { getInsights, getMonthBrief, defaultInsightsMonth, type Insight } from "@/lib/insights";
 import { monthLabel, monthLabelShort, pkr } from "@/lib/money";
-import { prettyDescription } from "@/lib/describe";
+import { getNamer } from "@/lib/payees";
 import {
   ChevronLeft, ChevronRight, TrendingUp, Repeat, Copy, Trophy, ArrowUpRight, Sparkles, Target, ArrowRight
 } from "lucide-react";
@@ -20,6 +20,7 @@ export const dynamic = "force-dynamic";
 export default async function InsightsPage({ searchParams }: { searchParams: Promise<{ m?: string }> }) {
   const sp = await searchParams;
   const { household } = await requireContext();
+  const nameOf = await getNamer(household.id);
   const m = sp.m || defaultInsightsMonth();
   const budget = Number(household.monthlyBudget);
   const exclude = household.excludeOneOffs;
@@ -163,7 +164,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
                   <li key={x.id}>
                     <Link href={`/ledger/${x.id}`} className="flex items-center justify-between gap-3 rounded-[12px] px-2 py-2 transition hover:bg-page">
                       <span className="min-w-0">
-                        <span className="block truncate text-[14px] font-semibold">{prettyDescription(x.description) || "—"}</span>
+                        <span className="block truncate text-[14px] font-semibold">{nameOf(x.description, "—")}</span>
                         <span className="text-[12px] font-semibold text-muted">
                           {new Date(x.txDate + "T00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                           {x.category ? ` · ${x.category}` : ""}

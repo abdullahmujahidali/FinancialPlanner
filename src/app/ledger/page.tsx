@@ -7,7 +7,7 @@ import { addComment, deleteComment, toggleReaction } from "@/actions/comments";
 import CommentThread, { groupThreads } from "@/components/CommentThread";
 import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
 import { ChevronLeft, ChevronRight, Plus, ArrowLeftRight, ArrowDownLeft } from "lucide-react";
-import { prettyDescription } from "@/lib/describe";
+import { getNamer } from "@/lib/payees";
 import LedgerFilters from "@/components/LedgerFilters";
 import ViewToggle from "@/components/ViewToggle";
 import LedgerTable from "@/components/LedgerTable";
@@ -42,6 +42,7 @@ function idOf(v?: string) {
 export default async function LedgerPage({ searchParams }: { searchParams: Promise<Params> }) {
   const sp = await searchParams;
   const { user, household } = await requireContext();
+  const nameOf = await getNamer(household.id);
   const m = sp.m || monthKey();
   const { from, next } = monthRange(m);
 
@@ -237,6 +238,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
           {view === "table" ? (
             <LedgerTable
               rows={rows}
+              titles={Object.fromEntries(rows.map((r) => [r.tx.id, nameOf(r.tx.description, r.category ?? "")]))}
               showYear={searching}
               sort={sortKey}
               dir={dir}
@@ -247,8 +249,10 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
             const showDate = tx.txDate !== lastDate;
             lastDate = tx.txDate;
             const raw = tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense");
-            const title = prettyDescription(raw);
+            const title = nameOf(tx.description, raw);
+            const isRefund = tx.type === "expense" && Number(tx.amount) < 0;
             const flags = [
+              isRefund && ["refund", "bg-good"],
               tx.isAbnormal && ["one-off", "bg-blush"],
               tx.isPassthrough && ["pass-through", "bg-acid"],
               tx.needsReview && ["needs review", "bg-over"]
@@ -290,7 +294,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                     </div>
                   </div>
                   <span className={"num shrink-0 text-[14.5px] font-bold " +
-                    (tx.type === "income" ? "text-good" : tx.type === "transfer" ? "text-muted" : "")}>
+                    (tx.type === "income" || isRefund ? "text-good" : tx.type === "transfer" ? "text-muted" : "")}>
                     {tx.type === "income" ? "+" : ""}{pkr(Number(tx.amount))}
                   </span>
                 </Link>

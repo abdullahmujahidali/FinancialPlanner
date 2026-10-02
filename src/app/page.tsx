@@ -9,7 +9,7 @@ import { getSetupItems } from "@/components/SetupChecklist";
 import WhatsNew from "@/components/WhatsNew";
 import SpendPace from "@/components/SpendPace";
 import { getInsights } from "@/lib/insights";
-import { prettyDescription } from "@/lib/describe";
+import { getNamer } from "@/lib/payees";
 import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
 import { getBalances } from "@/lib/balances";
 import { getGoalForecasts, etaLabel } from "@/lib/forecast";
@@ -21,6 +21,7 @@ export const dynamic = "force-dynamic";
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ m?: string }> }) {
   const sp = await searchParams;
   const { household, user } = await requireContext();
+  const nameOf = await getNamer(household.id);
   const m = sp.m || monthKey();
   const { from, next } = monthRange(m);
   const H = eq(t.transactions.householdId, household.id);
@@ -447,7 +448,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                   <Link href={`/ledger/${r.id}`} className="flex items-center justify-between gap-3 rounded-[12px] px-2 py-2.5 transition hover:bg-page">
                     <span className="min-w-0">
                       <span className="block truncate text-[14px] font-semibold">
-                        {prettyDescription(r.description || r.category || (r.type === "income" ? "Income" : "Entry"))}
+                        {nameOf(r.description, r.category || (r.type === "income" ? "Income" : "Entry"))}
                       </span>
                       <span className="text-[12px] font-semibold text-muted">
                         {new Date(r.txDate + "T00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}

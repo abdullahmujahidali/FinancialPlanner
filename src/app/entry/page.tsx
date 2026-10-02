@@ -32,11 +32,11 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
 
       <form action={addTransaction} className="group/f space-y-5">
         {/* type switch — rounded segmented pills */}
-        <div className="grid grid-cols-3 gap-1.5 rounded-full bg-card p-1.5">
-          {[["expense", "Expense"], ["income", "Income"], ["transfer", "Transfer"]].map(([v, label], i) => (
+        <div className="grid grid-cols-4 gap-1 rounded-full bg-card p-1.5">
+          {[["expense", "Expense"], ["refund", "Refund"], ["income", "Income"], ["transfer", "Transfer"]].map(([v, label], i) => (
             <label key={v}>
               <input type="radio" name="type" value={v} defaultChecked={i === 0} className="peer sr-only" />
-              <span className="block cursor-pointer rounded-full py-2.5 text-center text-[14px] font-bold transition peer-checked:bg-ink peer-checked:text-acid">
+              <span className="block cursor-pointer rounded-full py-2.5 text-center text-[14px] font-bold transition peer-checked:bg-ink peer-checked:text-acid sm:text-[14px] text-[13px]">
                 {label}
               </span>
             </label>
@@ -64,7 +64,7 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
           {/* Category first: it is the decision; account and date are usually
               right already. Fields that don't apply to the chosen type are
               hidden with :has() on the type radios, so no client JS. */}
-          <div className="hidden lg:col-span-2 group-has-[input[value=expense]:checked]/f:block">
+          <div className="hidden lg:col-span-2 group-has-[input[value=expense]:checked]/f:block group-has-[input[value=refund]:checked]/f:block">
           <SearchableSelect
               name="categoryId"
               label="Category"

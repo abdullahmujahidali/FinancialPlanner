@@ -314,3 +314,19 @@ export const recurring = pgTable("recurring", {
   isArchived: boolean("is_archived").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow()
 });
+
+// ---------- payee names ----------
+/**
+ * The household's own name for a bank description. Matched exactly, so every
+ * entry with that description — past and future — shows `name` instead of
+ * the bank's text. Display only; `transactions.description` is untouched.
+ */
+export const payees = pgTable("payees", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id),
+  match: text("match").notNull(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+}, (t) => ({
+  matchUniq: uniqueIndex("payees_match").on(t.householdId, t.match)
+}));
