@@ -53,16 +53,16 @@ export default async function LoansPage({
 
       {/* ── The two totals ───────────────────────────────────────────────── */}
       <section className="zone-ink mb-5">
-        <div className="grid gap-6 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-3 sm:gap-6">
           <div>
             <span className="eyebrow text-white/45">You owe</span>
-            <p className="num mt-2 text-[26px] font-extrabold text-white lg:text-[32px]">
+            <p className="num mt-2 whitespace-nowrap text-[18px] font-extrabold text-white sm:text-[26px] lg:text-[32px]">
               {pkr(weOwe, { compact: true })}
             </p>
           </div>
           <div>
             <span className="eyebrow text-white/45">Owed to you</span>
-            <p className="num mt-2 text-[26px] font-extrabold text-white lg:text-[32px]">
+            <p className="num mt-2 whitespace-nowrap text-[18px] font-extrabold text-white sm:text-[26px] lg:text-[32px]">
               {pkr(owedToUs, { compact: true })}
             </p>
           </div>
@@ -70,7 +70,7 @@ export default async function LoansPage({
             <span className="eyebrow text-white/45">Net effect</span>
             <p
               className={
-                "num mt-2 text-[26px] font-extrabold lg:text-[32px] " +
+                "num mt-2 whitespace-nowrap text-[18px] font-extrabold sm:text-[26px] lg:text-[32px] " +
                 (net < 0 ? "text-blush" : "text-acid")
               }
             >
@@ -206,118 +206,102 @@ function LoanGroup({
           const pct = Math.min(100, Math.round((l.paid / l.principal) * 100));
           const history = paymentsByLoan.get(l.id) ?? [];
           return (
-            <div
-              key={l.id}
-              className={"overflow-hidden rounded-[22px] bg-card " + (settled ? "opacity-60" : "")}
-            >
-              <div className="p-6 lg:p-7">
-                <div className="flex items-start justify-between gap-3">
-                  <span className="flex min-w-0 items-center gap-2.5 text-[17px] font-bold">
-                    <span className="truncate">{l.counterparty}</span>
-                    {settled && <span className="tag-acid shrink-0">settled</span>}
+            <div key={l.id} className={"overflow-hidden rounded-[22px] bg-card " + (settled ? "opacity-60" : "")}>
+              <div className="p-5 lg:p-6">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-page text-[15px] font-extrabold">
+                    {l.counterparty.trim().charAt(0).toUpperCase()}
                   </span>
-                  <span className="num shrink-0 text-[13px] font-bold text-muted">
-                    {pkr(l.paid, { compact: true })} / {pkr(l.principal, { compact: true })}
-                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-[16px] font-bold">{l.counterparty}</span>
+                      {settled && <span className="tag-acid shrink-0">settled</span>}
+                    </div>
+                    <div className="mt-0.5 truncate text-[12.5px] font-medium text-muted">
+                      {l.note ? `${l.note} · ` : ""}since {fmtDate(l.startedOn)}
+                      {l.dueOn && ` · due ${fmtDate(l.dueOn)}`}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="num text-[17px] font-extrabold">
+                      {settled ? pkr(l.principal, { compact: true }) : pkr(l.outstanding, { compact: true })}
+                    </div>
+                    <div className="text-[11.5px] font-bold text-muted">
+                      {settled ? "repaid in full" : `left of ${pkr(l.principal, { compact: true })}`}
+                    </div>
+                  </div>
                 </div>
 
-                {l.note && <p className="mt-2 text-[13px] text-muted">{l.note}</p>}
-                <div className="eyebrow mt-2 text-muted">
-                  since {l.startedOn}
-                  {l.dueOn && ` · due ${l.dueOn}`}
+                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-page">
+                  <div className="h-full rounded-full bg-ink" style={{ width: `${pct}%` }} />
                 </div>
-
-                <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-page">
-                  <div className="h-full rounded-full bg-acid" style={{ width: `${pct}%` }} />
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                  <span className="text-[13px] font-bold">
-                    {settled ? "Nothing outstanding" : `${pkr(l.outstanding)} still to go`}
-                  </span>
-                  {l.overpaid > 0 && (
-                    <span className="text-[13px] font-bold text-ink">
-                      {pkr(l.overpaid)} more than the amount — check the payments
-                    </span>
-                  )}
+                <div className="mt-1.5 flex justify-between text-[11.5px] font-bold text-muted">
+                  <span>{pct}% {l.direction === "owed_by_us" ? "repaid" : "received"}</span>
+                  {l.overpaid > 0 && <span className="text-over">{pkr(l.overpaid)} over — check the payments</span>}
                 </div>
 
                 {history.length > 0 && (
-                  <ul className="mt-5 space-y-1.5 border-t border-ink/5 pt-4">
+                  <ul className="mt-4 border-t border-line pt-2">
                     {history
                       .slice()
                       .sort((a, b) => b.paidOn.localeCompare(a.paidOn))
                       .map((p) => (
-                        <li
-                          key={p.id}
-                          className="flex items-baseline justify-between gap-3 text-[13px]"
-                        >
-                          <span className="text-muted">
-                            {p.paidOn}
+                        <li key={p.id} className="flex items-baseline justify-between gap-3 py-1.5 text-[13px]">
+                          <span className="min-w-0 truncate text-muted">
+                            <span className="font-semibold text-ink">{fmtDate(p.paidOn)}</span>
                             {p.note ? ` · ${p.note}` : ""}
                           </span>
-                          <span className="num font-bold">{pkr(Number(p.amount))}</span>
+                          <span className="num shrink-0 font-bold">{pkr(Number(p.amount))}</span>
                         </li>
                       ))}
                   </ul>
                 )}
               </div>
 
-              <div className="space-y-4 bg-page p-6 lg:p-7">
-                {!settled && (
-                  <form action={addLoanPayment} className="space-y-2.5">
-                    <input type="hidden" name="loanId" value={l.id} />
-                    <div className="flex flex-wrap gap-2.5">
-                      <input
-                        name="amount"
-                        type="number"
-                        inputMode="numeric"
-                        step="0.01"
-                        placeholder={l.direction === "owed_by_us" ? "Repaid" : "Received"}
-                        className="field num min-w-0 flex-1"
-                      />
-                      <input
-                        name="paidOn"
-                        type="date"
-                        defaultValue={todayStr()}
-                        className="field w-[150px] shrink-0"
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-2.5">
-                      <select name="accountId" className="field min-w-0 flex-1" defaultValue="">
-                        <option value="">Cash — no account</option>
+              {/* The repayment form stays folded until it's wanted — open on
+                  every card, it turned the page into a wall of empty fields. */}
+              <div className="flex items-start gap-2 border-t border-line px-5 py-3 lg:px-6">
+                {!settled ? (
+                  <details className="group min-w-0 flex-1">
+                    <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full bg-page px-4 py-2 text-[13px] font-bold transition hover:bg-line">
+                      <Plus size={14} strokeWidth={2.8} />
+                      {l.direction === "owed_by_us" ? "Record a repayment" : "Record money received"}
+                    </summary>
+                    <form action={addLoanPayment} className="mt-3 grid gap-2.5 sm:grid-cols-[1fr_150px]">
+                      <input type="hidden" name="loanId" value={l.id} />
+                      <input name="amount" type="number" inputMode="numeric" step="0.01" required
+                        placeholder="Amount" className="field num" />
+                      <input name="paidOn" type="date" defaultValue={todayStr()} className="field" />
+                      <select name="accountId" className="field sm:col-span-2" defaultValue="">
+                        <option value="">Cash — no bank account</option>
                         {accounts.map((a) => (
                           <option key={a.id} value={a.id}>
-                            From {a.name}
+                            {l.direction === "owed_by_us" ? "From" : "Into"} {a.name}
                           </option>
                         ))}
                       </select>
-                      <button className="btn shrink-0 px-4" aria-label="Record payment">
-                        <Check size={16} strokeWidth={3} />
+                      <p className="text-[12px] leading-snug text-muted sm:col-span-2">
+                        Picking a bank also adds a transfer to the ledger so its balance stays right. Never counted as spending.
+                      </p>
+                      <button className="btn sm:col-span-2">
+                        <Check size={16} strokeWidth={3} /> Save
                       </button>
-                    </div>
-                    <p className="text-[12px] leading-snug text-muted">
-                      Choosing an account also writes a transfer in the ledger, so the balance
-                      stays right. It is never counted as spending.
-                    </p>
-                  </form>
-                )}
-
-                <div className="flex justify-end">
-                  <ConfirmDelete
-                    action={deleteLoan}
-                    id={l.id}
-                    label={`${l.counterparty} — ${pkr(l.principal)}`}
-                    noun="loan"
-                    consequence={
-                      history.length > 0
-                        ? history.length === 1
-                          ? "The payment on it goes too, along with any ledger row it wrote."
-                          : `All ${history.length} payments on it go too, along with any ledger rows they wrote.`
-                        : undefined
-                    }
-                  />
-                </div>
+                    </form>
+                  </details>
+                ) : <span className="flex-1" />}
+                <ConfirmDelete
+                  action={deleteLoan}
+                  id={l.id}
+                  label={`${l.counterparty} — ${pkr(l.principal)}`}
+                  noun="loan"
+                  consequence={
+                    history.length > 0
+                      ? history.length === 1
+                        ? "The payment on it goes too, along with any ledger row it wrote."
+                        : `All ${history.length} payments on it go too, along with any ledger rows they wrote.`
+                      : undefined
+                  }
+                />
               </div>
             </div>
           );
@@ -325,4 +309,9 @@ function LoanGroup({
       </div>
     </section>
   );
+}
+
+/** "2026-09-26" → "26 Sep 2026": ISO dates are for databases, not people. */
+function fmtDate(d: string) {
+  return new Date(d + "T00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }

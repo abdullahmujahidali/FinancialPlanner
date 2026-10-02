@@ -30,7 +30,7 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
         <p className="mb-5 rounded-[18px] bg-blush px-6 py-4 text-[14px] font-bold">{sp.e}</p>
       )}
 
-      <form action={addTransaction} className="space-y-5">
+      <form action={addTransaction} className="group/f space-y-5">
         {/* type switch — rounded segmented pills */}
         <div className="grid grid-cols-3 gap-1.5 rounded-full bg-card p-1.5">
           {[["expense", "Expense"], ["income", "Income"], ["transfer", "Transfer"]].map(([v, label], i) => (
@@ -61,6 +61,20 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
         </div>
 
         <div className="grid gap-5 rounded-[22px] bg-card p-6 lg:grid-cols-2 lg:p-8">
+          {/* Category first: it is the decision; account and date are usually
+              right already. Fields that don't apply to the chosen type are
+              hidden with :has() on the type radios, so no client JS. */}
+          <div className="hidden lg:col-span-2 group-has-[input[value=expense]:checked]/f:block">
+          <SearchableSelect
+              name="categoryId"
+              label="Category"
+              options={categories.map((c) => ({ id: c.id, name: c.name }))}
+              emptyLabel="—"
+              placeholder="Search or type a new one…"
+              allowCreate={{ action: quickAddCategory, label: "Create" }}
+            />
+          </div>
+
           <SearchableSelect
             name="accountId"
             label="From / account"
@@ -74,22 +88,15 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
             <input name="txDate" type="date" defaultValue={todayStr()} className="field mt-2" />
           </label>
 
+          <div className="hidden lg:col-span-2 group-has-[input[value=transfer]:checked]/f:block">
           <SearchableSelect
-            name="counterAccountId"
-            label="To (transfers only)"
-            options={accounts.map((a) => ({ id: a.id, name: a.name }))}
-            emptyLabel="—"
-            placeholder="Search accounts…"
-          />
-
-          <SearchableSelect
-            name="categoryId"
-            label="Category"
-            options={categories.map((c) => ({ id: c.id, name: c.name }))}
-            emptyLabel="—"
-            placeholder="Search or type a new one…"
-            allowCreate={{ action: quickAddCategory, label: "Create" }}
-          />
+              name="counterAccountId"
+              label="To account"
+              options={accounts.map((a) => ({ id: a.id, name: a.name }))}
+              emptyLabel="—"
+              placeholder="Search accounts…"
+            />
+          </div>
 
           <div className="lg:col-span-2">
             <SearchableSelect

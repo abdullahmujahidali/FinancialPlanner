@@ -139,7 +139,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                     className={"overflow-hidden rounded-[22px] bg-card " + (a.status === "sold" ? "opacity-60" : "")}>
                     {/* The link and the delete button are siblings: a <form>
                         may never be nested inside an <a>. */}
-                    <div className="flex items-start gap-2 p-6 lg:p-7">
+                    <div className="flex items-start gap-2 p-5 lg:p-7">
                       <Link
                         href={`/assets/${a.id}`}
                         className="flex min-w-0 flex-1 items-start justify-between gap-4 rounded-[14px] transition hover:opacity-70"
@@ -197,23 +197,30 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                         </div>
                       </details>
                     </div>
+                    {/* Folded until wanted: revaluing is quarterly and selling is
+                        once, so open fields under every holding were noise. */}
                     {a.status === "active" && (
-                      <div className="grid grid-cols-1 gap-3 bg-page p-6 sm:grid-cols-2 lg:px-7">
-                        <form action={revalueAsset} className="flex gap-2.5">
-                          <input type="hidden" name="assetId" value={a.id} />
-                          <input type="hidden" name="valuedOn" value={todayStr()} />
-                          <input name="value" type="number" inputMode="numeric" placeholder="New value"
-                            className="field num min-w-0" />
-                          <button className="btn-quiet btn-sm shrink-0">Revalue</button>
-                        </form>
-                        <form action={sellAsset} className="flex gap-2.5">
-                          <input type="hidden" name="assetId" value={a.id} />
-                          <input type="hidden" name="soldDate" value={todayStr()} />
-                          <input name="soldPrice" type="number" inputMode="numeric" placeholder="Sold for"
-                            className="field num min-w-0" />
-                          <button className="btn-quiet btn-sm shrink-0">Sold</button>
-                        </form>
-                      </div>
+                      <details className="border-t border-line px-6 py-3 lg:px-7">
+                        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full bg-page px-4 py-2 text-[13px] font-bold transition hover:bg-line">
+                          Update value or mark sold
+                        </summary>
+                        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <form action={revalueAsset} className="flex gap-2.5">
+                            <input type="hidden" name="assetId" value={a.id} />
+                            <input type="hidden" name="valuedOn" value={todayStr()} />
+                            <input name="value" type="number" inputMode="numeric" placeholder="Value today"
+                              className="field num min-w-0 flex-1" />
+                            <button className="btn btn-sm shrink-0">Revalue</button>
+                          </form>
+                          <form action={sellAsset} className="flex gap-2.5">
+                            <input type="hidden" name="assetId" value={a.id} />
+                            <input type="hidden" name="soldDate" value={todayStr()} />
+                            <input name="soldPrice" type="number" inputMode="numeric" placeholder="Sold for"
+                              className="field num min-w-0 flex-1" />
+                            <button className="btn-quiet btn-sm shrink-0">Sold</button>
+                          </form>
+                        </div>
+                      </details>
                     )}
                   </div>
                 );

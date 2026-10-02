@@ -64,7 +64,9 @@ export const categories = pgTable("categories", {
    * hides one from the pickers while its history stays readable. Mirrors
    * `accounts.isArchived`.
    */
-  isArchived: boolean("is_archived").notNull().default(false)
+  isArchived: boolean("is_archived").notNull().default(false),
+  /** Optional slice of the household budget planned for this category. */
+  monthlyBudget: numeric("monthly_budget", { precision: 14, scale: 2 })
 });
 
 // ---------- ledger ----------
@@ -281,5 +283,29 @@ export const commentReactions = pgTable("comment_reactions", {
   commentId: integer("comment_id").notNull().references(() => comments.id, { onDelete: "cascade" }),
   userId: integer("user_id").notNull().references(() => users.id),
   emoji: text("emoji").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+});
+
+// ---------- regular payments ----------
+/**
+ * Something paid every month — the maid, the milkman, the school van — set up
+ * once and offered on the dashboard each month for one-tap entry. Never posted
+ * automatically: anything that also arrives on a bank statement would then be
+ * counted twice, and amounts like the milk bill move a little each month.
+ * `lastMonth` ('YYYY-MM') is the latest month it was added or skipped.
+ */
+export const recurring = pgTable("recurring", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id),
+  description: text("description").notNull(),
+  type: text("type").notNull().default("expense"),
+  amount: numeric("amount", { precision: 14, scale: 2 }).notNull(),
+  accountId: integer("account_id").notNull().references(() => accounts.id),
+  categoryId: integer("category_id").references(() => categories.id),
+  personId: integer("person_id").references(() => persons.id),
+  isPassthrough: boolean("is_passthrough").notNull().default(false),
+  dayOfMonth: integer("day_of_month").notNull().default(1),
+  lastMonth: text("last_month"),
+  isArchived: boolean("is_archived").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow()
 });

@@ -8,6 +8,7 @@ import { markAllRead, dismiss } from "@/actions/notifications";
 import NotificationBell from "./NotificationBell";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+import { cookies } from "next/headers";
 
 /**
  * App frame. Phones get a bottom tab bar; lg+ gets a fixed sidebar rail and a
@@ -38,6 +39,7 @@ export default async function Shell({
   children: React.ReactNode;
 }) {
   const { household, user } = await requireContext();
+  const collapsed = (await cookies()).get("sb")?.value === "c";
   const [[review], notes] = await Promise.all([
     db()
       .select({ v: sql<string>`count(*)` })
@@ -57,8 +59,9 @@ export default async function Shell({
   ]);
 
   return (
-    <div className="lg:pl-[256px]">
+    <div className="transition-[padding] duration-200 lg:pl-[var(--sb)]">
       <Sidebar
+        collapsed={collapsed}
         household={household.name}
         userName={user.name}
         email={user.email}
@@ -67,8 +70,8 @@ export default async function Shell({
       />
       <div
         className={
-          "mx-auto min-h-[100dvh] px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] lg:px-12 lg:pb-16 lg:pt-10 " +
-          (wide ? "max-w-lg lg:max-w-none xl:max-w-[1500px]" : "max-w-lg lg:max-w-3xl")
+          "mx-auto min-h-[100dvh] px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] lg:px-10 lg:pb-16 lg:pt-8 " +
+          (wide ? "max-w-lg lg:max-w-none xl:max-w-[1500px]" : "max-w-lg lg:max-w-4xl")
         }
       >
         <header className="mb-6 gap-3 lg:mb-8 lg:flex lg:items-center">

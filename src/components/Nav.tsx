@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BookOpen, Plus, Inbox } from "lucide-react";
+import { Home, BookOpen, Plus, Sparkles } from "lucide-react";
 import MobileMenu from "./MobileMenu";
 
 const tabs = [
@@ -69,7 +69,10 @@ export default function Nav({
           <Plus size={26} strokeWidth={2.75} />
         </Link>
 
-        {tab("/review", "Review", Inbox, reviewCount)}
+        {/* Insights earns the tab: it answers the questions Tooba gets
+            asked. Review is still one tap away in Menu (badged), and Home
+            shows a banner whenever anything is waiting. */}
+        {tab("/insights", "Insights", Sparkles)}
 
         <MobileMenu household={household} email={email} reviewCount={reviewCount} logout={logout} />
       </div>

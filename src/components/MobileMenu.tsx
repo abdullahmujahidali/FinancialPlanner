@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Menu as MenuIcon, X, Building2, Target, Inbox, Upload, Settings, LogOut, CalendarRange,
-  FolderOpen, Sparkles, HandCoins
+  FolderOpen, HandCoins
 } from "lucide-react";
 
 /**
@@ -15,12 +15,11 @@ import {
  * and nothing enforces that they agree.
  */
 const links = [
+  { href: "/review", label: "Review queue", Icon: Inbox },
   { href: "/year", label: "Year overview", Icon: CalendarRange },
-  { href: "/insights", label: "Insights", Icon: Sparkles },
   { href: "/goals", label: "Goals", Icon: Target },
   { href: "/assets", label: "Assets", Icon: Building2 },
   { href: "/loans", label: "Loans", Icon: HandCoins },
-  { href: "/review", label: "Review queue", Icon: Inbox },
   { href: "/import", label: "Import bank CSV", Icon: Upload },
   { href: "/files", label: "Files & imports", Icon: FolderOpen },
   { href: "/settings", label: "Settings", Icon: Settings }
@@ -56,7 +55,14 @@ export default function MobileMenu({
         aria-label="Open menu"
         className="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-bold text-muted transition-colors"
       >
-        <MenuIcon size={21} strokeWidth={2} />
+        <span className="relative">
+          <MenuIcon size={21} strokeWidth={2} />
+          {reviewCount > 0 && (
+            <span className="absolute -right-2.5 -top-1.5 min-w-[17px] rounded-full bg-blush px-1 text-center text-[10px] font-bold leading-[17px] text-ink">
+              {reviewCount > 99 ? "99+" : reviewCount}
+            </span>
+          )}
+        </span>
         Menu
         <span className="h-[3px] w-5 rounded-full bg-transparent" />
       </button>

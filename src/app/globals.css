@@ -37,7 +37,9 @@
 }
 
 @layer base {
-  :root { color-scheme: light; }
+  /* Sidebar width: full, or the icon-only rail when collapsed. */
+  :root { color-scheme: light; --sb: 216px; }
+  :root[data-sb="c"] { --sb: 76px; }
   html { background: var(--color-page); }
   body { @apply bg-page text-ink antialiased; }
   h1, h2, h3 { @apply font-display tracking-[-0.025em]; }

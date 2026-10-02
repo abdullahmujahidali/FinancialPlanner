@@ -47,7 +47,8 @@ export default async function HouseholdSettings() {
               className="field num mt-2"
             />
             <span className="mt-2 block text-[13px] text-muted">
-              The target spend for one month. Whatever is left over at month end counts as savings.
+              The target spend for one month. Whatever is left over at month end counts as savings.{" "}
+              <a href="/settings/budget" className="font-bold text-ink underline underline-offset-4">Split it by category</a>
             </span>
           </label>
 

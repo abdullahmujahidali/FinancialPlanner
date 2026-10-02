@@ -97,6 +97,14 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
               automatic.
             </p>
           </section>
+          <section className="zone-card">
+            <h2 className="eyebrow">Older months are worth importing</h2>
+            <p className="mt-3 text-[14px] font-medium leading-relaxed text-muted">
+              Insights, the year view and goal dates all compare against earlier months. Import the last
+              two or three statements once and those pages have something to say straight away. Rows
+              already in the ledger are skipped, so overlapping dates are safe.
+            </p>
+          </section>
         </div>
       </div>
     </Shell>

@@ -6,17 +6,21 @@ import Donut from "@/components/Donut";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import RegularDue from "@/components/RegularDue";
+import SetupChecklist from "@/components/SetupChecklist";
+import SpendPace from "@/components/SpendPace";
+import { getInsights } from "@/lib/insights";
 import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
 import { getBalances } from "@/lib/balances";
 import { getGoalForecasts, etaLabel } from "@/lib/forecast";
 import { getLoanNet } from "@/lib/loans";
-import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowRight, Plus, Upload, Sparkles } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ m?: string }> }) {
   const sp = await searchParams;
-  const { household } = await requireContext();
+  const { household, user } = await requireContext();
   const m = sp.m || monthKey();
   const { from, next } = monthRange(m);
   const H = eq(t.transactions.householdId, household.id);
@@ -33,6 +37,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   // awaiting them in sequence cost seconds per page view. Fire them together.
   const [
     [spendRow],
+    [oneOffRow],
     [incomeRow],
     [reviewRow],
     byCategory,
@@ -45,6 +50,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       .from(t.transactions)
       .where(and(inMonth, eq(t.transactions.type, "expense"), eq(t.transactions.isPassthrough, false))),
 
+    // One-offs stay in the spend total; this is only so the hero can also say
+    // what an ordinary month looked like without the hospital bill.
+    db().select({ v: sql<string>`coalesce(sum(${t.transactions.amount}),0)` })
+      .from(t.transactions)
+      .where(and(inMonth, eq(t.transactions.type, "expense"), eq(t.transactions.isPassthrough, false),
+        eq(t.transactions.isAbnormal, true))),
+
     db().select({ v: sql<string>`coalesce(sum(${t.transactions.amount}),0)` })
       .from(t.transactions).where(and(inMonth, eq(t.transactions.type, "income"))),
 
@@ -52,12 +64,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       .from(t.transactions).where(and(H, eq(t.transactions.needsReview, true))),
 
     db().select({
-      name: t.categories.name, total: sql<string>`sum(${t.transactions.amount})`
+      id: t.categories.id, name: t.categories.name, plan: t.categories.monthlyBudget,
+      total: sql<string>`sum(${t.transactions.amount})`
     }).from(t.transactions)
       .leftJoin(t.categories, eq(t.transactions.categoryId, t.categories.id))
       .where(and(inMonth, eq(t.transactions.type, "expense"), eq(t.transactions.isPassthrough, false)))
-      .groupBy(t.categories.name)
-      .orderBy(desc(sql`sum(${t.transactions.amount})`)).limit(6),
+      .groupBy(t.categories.id, t.categories.name, t.categories.monthlyBudget)
+      .orderBy(desc(sql`sum(${t.transactions.amount})`)).limit(8),
 
     db().select({
       id: t.persons.id, name: t.persons.name, total: sql<string>`sum(${t.transactions.amount})`
@@ -136,10 +149,59 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   );
 
   const budget = Number(household.monthlyBudget);
+
+  // Day-by-day spend for this month and the one before, for the pace chart;
+  // the latest entries; and the strongest finding from Insights.
+  const [py, pmo] = m.split("-").map(Number);
+  const prevKey = monthKey(new Date(py, pmo - 2, 1));
+  const prevFrom = monthRange(prevKey).from;
+  const spendExpr = and(H, eq(t.transactions.type, "expense"), eq(t.transactions.isPassthrough, false));
+  const [dailyRows, recent, topInsights] = await Promise.all([
+    db().select({
+      d: sql<string>`to_char(${t.transactions.txDate}, 'YYYY-MM-DD')`,
+      v: sql<string>`sum(${t.transactions.amount})`
+    }).from(t.transactions)
+      .where(and(spendExpr, gte(t.transactions.txDate, prevFrom), lt(t.transactions.txDate, next)))
+      .groupBy(sql`1`),
+    db().select({
+      id: t.transactions.id, description: t.transactions.description, amount: t.transactions.amount,
+      type: t.transactions.type, txDate: t.transactions.txDate, category: t.categories.name
+    }).from(t.transactions)
+      .leftJoin(t.categories, eq(t.categories.id, t.transactions.categoryId))
+      .where(inMonth)
+      .orderBy(desc(t.transactions.txDate), desc(t.transactions.id)).limit(5),
+    getInsights(household.id, m, budget, household.incentivePct).catch(() => [])
+  ]);
+  const cumulative = (key: string, days: number) => {
+    const out: number[] = [];
+    let run = 0;
+    for (let d = 1; d <= days; d++) {
+      const row = dailyRows.find((r) => r.d === `${key}-${String(d).padStart(2, "0")}`);
+      run += row ? Number(row.v) : 0;
+      out.push(run);
+    }
+    return out;
+  };
+  const daysInMonth = new Date(py, pmo, 0).getDate();
+  const nowKey = monthKey();
+  const dayNow = m === nowKey ? new Date().getDate() : m < nowKey ? daysInMonth : 0;
+  const daily = cumulative(m, daysInMonth);
+  const lastDaily = dailyRows.some((r) => r.d.startsWith(prevKey))
+    ? cumulative(prevKey, new Date(py, pmo - 1, 0).getDate())
+    : null;
+  const daysLeft = m === nowKey ? daysInMonth - dayNow + 1 : 0;
+  const firstName = (user.name || "").split(" ")[0];
+
   const spend = Number(spendRow.v);
   const income = Number(incomeRow.v);
+  const oneOffs = Number(oneOffRow.v);
+  const routine = spend - oneOffs;
+  // A month still running has nothing "saved" yet — on the 2nd it would
+  // otherwise claim the whole budget as savings and pay the incentive on it.
+  const running = m >= monthKey();
   const savings = Math.max(0, budget - spend);
   const incentive = Math.round(savings * household.incentivePct / 100);
+  const routineIncentive = Math.round(Math.max(0, budget - routine) * household.incentivePct / 100);
   const reviewCount = Number(reviewRow.v);
   const pct = budget > 0 ? Math.min(100, Math.round((spend / budget) * 100)) : 0;
   const over = budget > 0 && spend > budget;
@@ -173,6 +235,23 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </div>
       }
     >
+      {/* A line that greets the person and says where the month stands, so
+          the page opens with a sentence rather than a wall of figures. */}
+      <div className="-mt-2 mb-5 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[15px] font-semibold text-muted">
+          {firstName ? `Salaam, ${firstName}. ` : ""}
+          {m === nowKey
+            ? `Day ${dayNow} of ${daysInMonth}${budget > 0 ? (spend <= budget
+              ? ` — ${pkr(Math.round((budget - spend) / daysLeft))} a day keeps the month in budget.`
+              : " — the budget is already used up.") : "."}`
+            : m < nowKey ? `Looking back at ${monthLabel(m)}.` : `${monthLabel(m)} hasn't started.`}
+        </p>
+        <div className="flex gap-2">
+          <Link href="/entry" className="btn btn-sm gap-1.5"><Plus size={15} strokeWidth={2.75} /> Expense</Link>
+          <Link href="/import" className="btn-quiet btn-sm gap-1.5"><Upload size={15} strokeWidth={2.4} /> Import</Link>
+        </div>
+      </div>
+
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
         <div className="flex flex-col gap-5 lg:w-[56%] lg:shrink-0 xl:w-[58%]">
 
@@ -192,35 +271,78 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                   : `${pkr(budget - spend, { compact: true })} left`}
               </span>
             </div>
+            {oneOffs > 0 && (
+              <p className="mt-3 text-[13px] font-semibold text-ink/70">
+                {pkr(oneOffs, { compact: true })} of this was one-offs. Without them the month
+                came to {pkr(routine, { compact: true })}
+                {budget > 0 && (routine <= budget
+                  ? `, ${pkr(budget - routine, { compact: true })} under budget.`
+                  : `, still ${pkr(routine - budget, { compact: true })} over.`)}
+              </p>
+            )}
           </section>
 
           {/* ── Three-up figures, black zone ─────────────────────────────── */}
           <section className="zone-ink !py-7">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-3 sm:gap-4">
               {[
                 ["Income", pkr(income, { compact: true }), "text-white", null],
-                [
-                  "Saved",
-                  pkr(savings, { compact: true }),
-                  "text-white",
-                  over ? "budget exceeded" : `of ${pkr(budget, { compact: true })} budget`
-                ],
-                [
-                  `Incentive ${household.incentivePct}%`,
-                  pkr(incentive, { compact: true }),
-                  over ? "text-white/40" : "text-acid",
-                  // A zero here is a real result, not a bug — say which.
-                  over ? "nothing saved this month" : `${household.incentivePct}% of what's saved`
-                ]
+                running
+                  ? ["Left", pkr(savings, { compact: true }), "text-white",
+                    over ? "budget exceeded" : `of ${pkr(budget, { compact: true })} budget`]
+                  : ["Saved", pkr(savings, { compact: true }), "text-white",
+                    over ? "budget exceeded" : `of ${pkr(budget, { compact: true })} budget`],
+                running
+                  ? [`Incentive ${household.incentivePct}%`, "—", "text-white/40",
+                    "settled at month end"]
+                  : [
+                    `Incentive ${household.incentivePct}%`,
+                    pkr(incentive, { compact: true }),
+                    over ? "text-white/40" : "text-acid",
+                    // A zero here is a real result, not a bug — say which. When
+                    // one-offs caused it, show what they cost, so the household
+                    // can decide whether a hospital bill should cost the incentive.
+                    over && oneOffs > 0 && routineIncentive > 0
+                      ? `${pkr(routineIncentive, { compact: true })} without one-offs`
+                      : over ? "nothing saved this month" : `${household.incentivePct}% of what's saved`
+                  ]
               ].map(([label, value, tone, hint], i) => (
                 <div key={i}>
                   <div className="eyebrow text-white/45">{label}</div>
-                  <div className={"money mt-2 text-[22px] font-bold lg:text-[26px] " + tone}>{value}</div>
-                  {hint && <div className="mt-1 text-[11px] font-semibold text-white/35">{hint}</div>}
+                  <div className={"money mt-2 whitespace-nowrap text-[17px] font-bold sm:text-[22px] lg:text-[26px] " + tone}>{value}</div>
+                  {hint && <div className="mt-1 hidden text-[11px] font-semibold leading-snug text-white/35 sm:block">{hint}</div>}
                 </div>
               ))}
             </div>
           </section>
+
+          {/* ── What isn't set up yet, and what that costs ─────────────── */}
+          <SetupChecklist
+            householdId={household.id}
+            reviewCount={reviewCount}
+            activeGoals={activeGoals.length}
+            goalsWithoutSavings={activeGoals.filter((g) => !((goalSums.get(g.id) ?? 0) > 0)).length}
+          />
+
+          {/* Early in a month there is nothing to show yet — the month just
+              closed is what people are asking about, so point straight at it. */}
+          {m === nowKey && lastDaily && spend === 0 && (
+            <Link href={`/insights?m=${prevKey}`}
+              className="flex items-center justify-between gap-3 rounded-[22px] bg-card px-6 py-5 transition hover:bg-line">
+              <span>
+                <span className="eyebrow block text-muted">{monthLabel(prevKey)}</span>
+                <span className="mt-1 block text-[17px] font-extrabold">
+                  {pkr(lastDaily[lastDaily.length - 1])} spent
+                  {budget > 0 && <span className="text-muted"> of {pkr(budget, { compact: true })}</span>}
+                </span>
+                <span className="mt-0.5 block text-[13px] font-semibold text-muted">See where it went and what changed</span>
+              </span>
+              <ArrowRight size={18} strokeWidth={2.5} className="shrink-0" />
+            </Link>
+          )}
+
+          {/* ── Regular payments still to add this month ───────────────── */}
+          {m === monthKey() && <RegularDue householdId={household.id} month={m} />}
 
           {/* ── Alerts ───────────────────────────────────────────────────── */}
           {reviewCount > 0 && (
@@ -238,32 +360,28 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             </Link>
           )}
 
-          {/* ── Income vs spend ──────────────────────────────────────────── */}
-          <section className="zone-card">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="eyebrow">Income vs spend</h2>
-              <div className="flex items-center gap-4 text-[12px] font-bold">
-                <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-acid" />In</span>
-                <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-ink" />Out</span>
+          {/* ── The month's pace against the budget ─────────────────────── */}
+          {dayNow > 0 && (
+            <section className="zone-card">
+              <h2 className="eyebrow mb-4">Spending through {monthLabelShort(m)}</h2>
+              <SpendPace daily={daily} lastDaily={lastDaily} budget={budget}
+                daysInMonth={daysInMonth} today={dayNow} />
+            </section>
+          )}
+
+          {/* ── Income vs spend — only once there is more than one month ── */}
+          {trend.length > 1 && (
+            <section className="zone-card">
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="eyebrow">Income vs spend</h2>
+                <div className="flex items-center gap-4 text-[12px] font-bold">
+                  <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-acid" />In</span>
+                  <span className="flex items-center gap-1.5"><i className="inline-block h-2.5 w-2.5 rounded-full bg-ink" />Out</span>
+                </div>
               </div>
-            </div>
-            {trend.length > 0 ? (
-              <>
-                <BarChart data={trend} current={currentLabel} />
-                {trend.length === 1 && (
-                  // One month is still a comparison worth seeing; only say the
-                  // trend is thin, rather than showing an empty card.
-                  <p className="mt-5 text-center text-[13px] font-semibold text-muted">
-                    One month so far — more bars appear as the months go by.
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="py-10 text-center text-[14px] font-semibold text-muted">
-                No entries yet this month.
-              </p>
-            )}
-          </section>
+              <BarChart data={trend} current={currentLabel} />
+            </section>
+          )}
 
           {/*
             ── Money on hand and net worth ──────────────────────────────────
@@ -409,6 +527,56 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
         {/* ── Right column: where it went ─────────────────────────────────── */}
         <div className="flex flex-col gap-5 lg:min-w-0 lg:flex-1">
+          {topInsights.length > 0 && (
+            <Link href={`/insights?m=${m}`}
+              className={"block rounded-[22px] px-6 py-5 transition lg:px-7 " +
+                (topInsights[0].good ? "bg-acid hover:bg-aciddim" : "bg-ink text-white hover:bg-ink2")}>
+              <span className="flex items-center justify-between gap-3">
+                <span className={"eyebrow flex items-center gap-2 " + (topInsights[0].good ? "" : "text-acid")}>
+                  <Sparkles size={13} strokeWidth={2.6} /> Worth a look
+                </span>
+                <span className={"text-[12px] font-bold " + (topInsights[0].good ? "text-ink/60" : "text-white/50")}>
+                  {topInsights.length > 1 ? `+${topInsights.length - 1} more` : ""} <ArrowRight size={14} className="inline" />
+                </span>
+              </span>
+              <span className="mt-2 block text-[17px] font-extrabold leading-snug tracking-[-0.02em]">
+                {topInsights[0].title}
+              </span>
+              <span className={"mt-1 block text-[13px] font-medium leading-relaxed " +
+                (topInsights[0].good ? "text-ink/70" : "text-white/60")}>{topInsights[0].detail}</span>
+            </Link>
+          )}
+
+          {recent.length > 0 && (
+            <section className="zone-card">
+              <div className="flex items-baseline justify-between">
+                <h2 className="eyebrow">Latest entries</h2>
+                <Link href={`/ledger?m=${m}`} className="text-[12px] font-bold text-muted hover:text-ink">All →</Link>
+              </div>
+              <ul className="mt-2">
+                {recent.map((r, i) => (
+                  <li key={r.id} className={i < recent.length - 1 ? "rule-row" : ""}>
+                    <Link href={`/ledger/${r.id}`}
+                      className="-mx-2 flex items-center justify-between gap-3 rounded-[12px] px-2 py-3 transition hover:bg-page">
+                      <span className="min-w-0">
+                        <span className="block truncate text-[14px] font-semibold">
+                          {r.description || r.category || (r.type === "income" ? "Income" : "Entry")}
+                        </span>
+                        <span className="text-[12px] font-bold text-muted">
+                          {new Date(r.txDate + "T00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                          {r.type === "transfer" ? " · transfer" : r.category ? ` · ${r.category}` : r.type === "expense" ? " · no category" : ""}
+                        </span>
+                      </span>
+                      <span className={"num shrink-0 text-[14px] font-bold " + (r.type === "income" ? "text-good" : r.type === "transfer" ? "text-muted" : "")}>
+                        {r.type === "income" ? "+" : ""}{pkr(Number(r.amount))}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {catData.length > 0 ? (
             <section className="overflow-hidden rounded-[22px] bg-card">
               <div className="bg-card px-6 pb-8 pt-6 lg:px-8">
@@ -421,21 +589,52 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               <ul className="px-6 py-2 lg:px-8">
                 {byCategory.map((c, i) => {
                   const label = c.name ?? "Uncategorised";
-                  const share = spend > 0 ? Math.round((Number(c.total) / spend) * 100) : 0;
+                  const total = Number(c.total);
+                  const share = spend > 0 ? Math.round((total / spend) * 100) : 0;
+                  // With a plan set, the row answers "how much of it is gone"
+                  // rather than "what share of the month was this".
+                  const plan = c.plan != null ? Number(c.plan) : null;
+                  const used = plan ? Math.min(100, (total / plan) * 100) : 0;
+                  const overPlan = plan != null && total > plan;
                   return (
-                    <li key={i}
-                      className={"flex items-center justify-between gap-3 py-4 text-[15px] " + (i < byCategory.length - 1 ? "rule-row" : "")}>
-                      <span className="flex min-w-0 items-center gap-3 font-semibold">
-                        <CategoryDot name={label} index={i} />
-                        <span className="truncate">{label}</span>
-                        <span className="shrink-0 text-[12px] font-bold text-muted">{share}%</span>
-                      </span>
-                      <span className="num shrink-0 font-bold">{pkr(Number(c.total))}</span>
+                    <li key={i} className={i < byCategory.length - 1 ? "rule-row" : ""}>
+                      <Link href={`/ledger?m=${m}${c.id ? `&cat=${c.id}` : ""}`}
+                        className="-mx-2 block rounded-[12px] px-2 py-3.5 transition hover:bg-page">
+                        <span className="flex items-center justify-between gap-3 text-[15px]">
+                          <span className="flex min-w-0 items-center gap-3 font-semibold">
+                            <CategoryDot name={label} index={i} />
+                            <span className="truncate">{label}</span>
+                            {plan == null && <span className="shrink-0 text-[12px] font-bold text-muted">{share}%</span>}
+                          </span>
+                          <span className="num shrink-0 font-bold">
+                            {pkr(total)}
+                            {plan != null && <span className="font-semibold text-muted"> / {pkr(plan, { compact: true })}</span>}
+                          </span>
+                        </span>
+                        {plan != null && (
+                          <span className="mt-2 flex items-center gap-3 pl-6">
+                            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-page">
+                              <span className={"block h-full rounded-full " + (overPlan ? "bg-over" : "bg-ink")}
+                                style={{ width: `${used}%` }} />
+                            </span>
+                            <span className={"shrink-0 text-[12px] font-bold " + (overPlan ? "text-over" : "text-muted")}>
+                              {overPlan ? `${pkr(total - plan, { compact: true })} over` : `${pkr(plan - total, { compact: true })} left`}
+                            </span>
+                          </span>
+                        )}
+                      </Link>
                     </li>
                   );
                 })}
               </ul>
 
+              {!byCategory.some((c) => c.plan != null) && (
+                <Link href="/settings/budget"
+                  className="flex items-center justify-between gap-3 border-t border-line px-6 py-4 text-[13px] font-bold text-muted transition hover:bg-page hover:text-ink lg:px-8">
+                  <span>Give each category its own budget — e.g. Petrol Rs 40,000</span>
+                  <ArrowRight size={16} strokeWidth={2.5} />
+                </Link>
+              )}
               {byCategory.some((c) => !c.name) && reviewCount > 0 && (
                 <Link href="/review"
                   className="flex items-center justify-between gap-3 bg-acid px-6 py-4 text-[13px] font-bold transition hover:bg-aciddim lg:px-8">
@@ -445,8 +644,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               )}
             </section>
           ) : (
-            <section className="zone-card text-[14px] font-semibold text-muted">
-              No spending recorded this month yet.
+            <section className="zone-card">
+              <p className="text-[14px] font-semibold text-muted">No spending recorded this month yet.</p>
             </section>
           )}
 
@@ -486,10 +685,6 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             </section>
           )}
 
-          <div className="flex gap-3">
-            <Link href="/import" className="btn-quiet flex-1">Import bank CSV</Link>
-            <Link href="/settings" className="btn-quiet flex-1">Settings</Link>
-          </div>
         </div>
       </div>
     </Shell>

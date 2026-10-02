@@ -4,6 +4,7 @@ import "./globals.css";
 import SWRegister from "@/components/SWRegister";
 import RouteProgress from "@/components/RouteProgress";
 import { Suspense } from "react";
+import { cookies } from "next/headers";
 
 // Archivo carries the oversized figures; Inter handles everything small.
 const sans = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-sans" });
@@ -29,9 +30,11 @@ export const viewport: Viewport = {
   viewportFit: "cover"
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Read on the server so a collapsed sidebar renders collapsed on first paint.
+  const sb = (await cookies()).get("sb")?.value === "c" ? "c" : undefined;
   return (
-    <html lang="en" className={`${sans.variable} ${display.variable}`}>
+    <html lang="en" data-sb={sb} className={`${sans.variable} ${display.variable}`}>
       <body className="font-sans">
         <SWRegister />
         {/* useSearchParams needs a boundary; the bar itself renders nothing until a nav starts. */}

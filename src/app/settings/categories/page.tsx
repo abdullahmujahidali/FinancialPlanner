@@ -3,8 +3,9 @@ import EditableRow from "@/components/EditableRow";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { asc, eq, sql } from "drizzle-orm";
-import { addCategory, renameCategory, setCategoryArchived } from "@/actions/admin";
-import { Plus } from "lucide-react";
+import { addCategory, renameCategory, setCategoryArchived, mergeCategory, addSuggestedCategories } from "@/actions/admin";
+import SubmitButton from "@/components/SubmitButton";
+import { Plus, Merge } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,24 @@ export const dynamic = "force-dynamic";
  * to their own section rather than disappearing, so nothing is lost and the
  * live list stays short enough to pick from quickly.
  */
+/**
+ * Buckets most households end up needing. Each is offered only when no
+ * existing category already covers it, judged by the keywords — "Shopping /
+ * Clothing" covers Clothing, so Clothing is not suggested twice.
+ */
+const SUGGESTIONS: Array<{ name: string; hint: string; covers: string[] }> = [
+  { name: "Gifts & Occasions", hint: "Eid, weddings, birthdays, salami", covers: ["gift", "occasion", "eid", "wedding"] },
+  { name: "Household Staff", hint: "Maid, driver, cook, guard", covers: ["staff", "maid", "driver", "servant"] },
+  { name: "Personal Care", hint: "Salon, barber, cosmetics", covers: ["personal care", "salon", "beauty", "grooming"] },
+  { name: "Clothing", hint: "Clothes, shoes, tailoring", covers: ["cloth", "apparel"] },
+  { name: "Mobile & Internet", hint: "Packages, PTCL, fibre", covers: ["mobile", "internet"] },
+  { name: "Car Maintenance", hint: "Service, tyres, tuning, token tax", covers: ["car", "vehicle"] },
+  { name: "Electronics & Appliances", hint: "Phones, AC, fridge, repairs", covers: ["electronic", "appliance"] },
+  { name: "Outings & Entertainment", hint: "Parks, cinema, trips out", covers: ["outing", "entertain", "leisure"] },
+  { name: "Insurance / Takaful", hint: "Health, car, life cover", covers: ["insur", "takaful"] },
+  { name: "Charity / Sadqa", hint: "Sadqa, donations, Zakat", covers: ["charity", "sadq", "zakat", "donation"] }
+];
+
 export default async function CategoriesSettings() {
   const { household } = await requireContext();
 
@@ -36,6 +55,8 @@ export default async function CategoriesSettings() {
 
   const live = categories.filter((c) => !c.isArchived);
   const archived = categories.filter((c) => c.isArchived);
+  const lower = categories.map((c) => c.name.toLowerCase());
+  const suggestions = SUGGESTIONS.filter((sg) => !lower.some((n) => sg.covers.some((k) => n.includes(k))));
 
   return (
     <SettingsPage
@@ -90,6 +111,67 @@ export default async function CategoriesSettings() {
           </ul>
         )}
       </div>
+
+      {suggestions.length > 0 && (
+        <form action={addSuggestedCategories} className="mt-8">
+          <h2 className="eyebrow mb-1">Commonly missing</h2>
+          <p className="mb-3 text-[13px] font-medium leading-relaxed text-muted">
+            Tick any that fit how you spend, then add them together.
+          </p>
+          <div className="overflow-hidden rounded-[22px] bg-card">
+            <ul>
+              {suggestions.map((sg) => (
+                <li key={sg.name} className="rule-row last:border-0">
+                  <label className="flex cursor-pointer items-center gap-3 px-5 py-3.5 lg:px-6">
+                    <input type="checkbox" name="name" value={sg.name} className="h-4 w-4 rounded accent-ink" />
+                    <span className="min-w-0">
+                      <span className="block text-[15px] font-semibold">{sg.name}</span>
+                      <span className="block text-[12.5px] font-medium text-muted">{sg.hint}</span>
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <SubmitButton className="btn mt-3 gap-1.5" pendingLabel="Adding…">
+            <Plus size={16} strokeWidth={2.75} /> Add selected
+          </SubmitButton>
+        </form>
+      )}
+
+      {live.length > 1 && (
+        <form action={mergeCategory} className="mt-8">
+          <h2 className="eyebrow mb-1">Merge two categories</h2>
+          <p className="mb-3 text-[13px] font-medium leading-relaxed text-muted">
+            Every entry and import rule in the first moves to the second, and the first is archived.
+            No amounts change. Use it when two buckets mean the same thing.
+          </p>
+          <div className="rounded-[22px] bg-card p-5 lg:p-6">
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+              <select name="id" required className="field" defaultValue="">
+                <option value="" disabled>Move everything from…</option>
+                {live.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({Number(c.used) || 0})
+                  </option>
+                ))}
+              </select>
+              <span className="text-center text-[13px] font-bold text-muted">into</span>
+              <select name="into" required className="field" defaultValue="">
+                <option value="" disabled>…this category</option>
+                {live.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <SubmitButton className="btn mt-4 gap-1.5" pendingLabel="Merging…">
+              <Merge size={16} strokeWidth={2.5} /> Merge
+            </SubmitButton>
+          </div>
+        </form>
+      )}
 
       {archived.length > 0 && (
         <>

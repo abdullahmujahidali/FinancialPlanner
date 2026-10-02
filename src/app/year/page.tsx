@@ -194,7 +194,7 @@ export default async function YearOverview({
 
           {/* ── Three-up figures, black zone ─────────────────────────────── */}
           <section className="zone-ink !py-7">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-3 sm:gap-4">
               {[
                 ["Income", pkr(income, { compact: true }), "text-white", "everything that came in"],
                 ["Saved", pkr(savings, { compact: true }), "text-white", trackedCount === 0 ? "no months tracked yet" : `under budget across ${trackedCount} tracked month${trackedCount === 1 ? "" : "s"}`],
@@ -207,8 +207,8 @@ export default async function YearOverview({
               ].map(([label, value, tone, hint], i) => (
                 <div key={i}>
                   <div className="eyebrow text-white/45">{label}</div>
-                  <div className={"money mt-2 text-[22px] font-bold lg:text-[26px] " + tone}>{value}</div>
-                  <div className="mt-1 text-[11px] font-semibold leading-tight text-white/40">{hint}</div>
+                  <div className={"money mt-2 whitespace-nowrap text-[17px] font-bold sm:text-[22px] lg:text-[26px] " + tone}>{value}</div>
+                  <div className="mt-1 hidden text-[11px] font-semibold leading-tight text-white/40 sm:block">{hint}</div>
                 </div>
               ))}
             </div>

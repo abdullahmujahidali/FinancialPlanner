@@ -3,12 +3,11 @@ import Link from "next/link";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { and, asc, desc, eq, gte, ilike, inArray, lt, SQL } from "drizzle-orm";
-import { deleteTransaction } from "@/actions/ledger";
 import { addComment, deleteComment, toggleReaction } from "@/actions/comments";
 import CommentThread, { groupThreads } from "@/components/CommentThread";
 import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
-import { ChevronLeft, ChevronRight, MoreHorizontal, Pencil, Plus } from "lucide-react";
-import ConfirmDelete from "@/components/ConfirmDelete";
+import { ChevronLeft, ChevronRight, Plus, ArrowLeftRight, ArrowDownLeft } from "lucide-react";
+import { prettyDescription } from "@/lib/describe";
 import LedgerFilters from "@/components/LedgerFilters";
 import ViewToggle from "@/components/ViewToggle";
 import LedgerTable from "@/components/LedgerTable";
@@ -162,6 +161,13 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
 
   const heading = searching ? "Search results — all months" : monthLabel(m);
 
+  // Each day's spend for its header, same rule as the month total.
+  const daySpend = new Map<string, number>();
+  for (const { tx } of rows) {
+    if (tx.type === "expense" && !tx.isPassthrough)
+      daySpend.set(tx.txDate, (daySpend.get(tx.txDate) ?? 0) + Number(tx.amount));
+  }
+
   let lastDate = "";
   return (
     // The table earns the full width; the card list reads better narrow.
@@ -180,7 +186,8 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
             <ChevronRight size={18} strokeWidth={2.5} />
           </Link>
         </div>
-        <ViewToggle view={view} />
+        {/* A 390px-wide table helps nobody; the toggle is a desktop control. */}
+        <span className="hidden sm:contents"><ViewToggle view={view} /></span>
         {/* The phone already has a + tab in the bottom bar, so this is the
             desktop affordance only and does not compete for narrow space. */}
         <Link href="/entry" className="btn btn-sm hidden gap-1.5 sm:inline-flex" aria-label="Add entry">
@@ -212,7 +219,10 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
               <p className="mt-3 text-[15px] font-semibold text-muted">
                 No entries this month yet. Add one from the + tab, or import a bank CSV.
               </p>
-              <Link href="/import" className="btn mt-6">Import bank CSV</Link>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <Link href={`/ledger?m=${prev}`} className="btn">See {monthLabel(prev)}</Link>
+                <Link href="/import" className="btn-quiet">Import bank CSV</Link>
+              </div>
             </>
           )}
         </section>
@@ -236,85 +246,54 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
           rows.map(({ tx, category, person, account }, i) => {
             const showDate = tx.txDate !== lastDate;
             lastDate = tx.txDate;
+            const raw = tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense");
+            const title = prettyDescription(raw);
+            const flags = [
+              tx.isAbnormal && ["one-off", "bg-blush"],
+              tx.isPassthrough && ["pass-through", "bg-acid"],
+              tx.needsReview && ["needs review", "bg-over"]
+            ].filter(Boolean) as Array<[string, string]>;
             return (
               <div key={tx.id}>
+                {/* Date headers sit inside the white card with the day's own
+                    spend beside them — grey bands between every day made the
+                    list read as stripes rather than entries. */}
                 {showDate && (
-                  <div className="eyebrow bg-page px-6 py-2.5 text-muted lg:px-8">
-                    {new Date(tx.txDate).toLocaleDateString("en-PK",
-                      searching
-                        ? { day: "numeric", month: "short", year: "numeric" }
-                        : { weekday: "short", day: "numeric", month: "short" })}
+                  <div className={"flex items-baseline justify-between px-5 pb-1.5 sm:px-6 lg:px-8 " + (i === 0 ? "pt-4" : "mt-2 border-t border-line pt-4")}>
+                    <span className="text-[12px] font-bold text-muted">
+                      {new Date(tx.txDate + "T00:00").toLocaleDateString("en-GB",
+                        searching
+                          ? { day: "numeric", month: "short", year: "numeric" }
+                          : { weekday: "short", day: "numeric", month: "short" })}
+                    </span>
+                    {(daySpend.get(tx.txDate) ?? 0) > 0 && (
+                      <span className="num text-[12px] font-bold text-muted">{pkr(daySpend.get(tx.txDate)!)}</span>
+                    )}
                   </div>
                 )}
-                <div className={"flex items-start justify-between gap-3 px-5 py-4 sm:gap-4 sm:px-6 lg:px-8 "
-                  + (i < rows.length - 1 && rows[i + 1].tx.txDate === tx.txDate ? "rule-row" : "")}>
-                  <div className="min-w-0">
-                    {/* Two lines rather than a hard truncate: a bank description
-                        is the only handle a row has, and "Raast P2P Fund trans…"
-                        identifies nothing. */}
-                    <div className="line-clamp-2 text-[15px] font-semibold">{tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense")}</div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] font-medium text-muted">
-                      <span>{account}</span>
-                      {category && <span>· {category}</span>}
-                      {person && <span>· {person}</span>}
-                      {tx.isPassthrough && <span className="tag-acid">pass-through</span>}
-                      {tx.isAbnormal && <span className="tag-blush">one-off</span>}
-                      {tx.needsReview && <span className="tag-blush">review</span>}
-                      {tx.type === "transfer" && <span className="tag-muted">transfer</span>}
+                <Link href={`/ledger/${tx.id}`} title={raw !== title ? raw : undefined}
+                  className="flex items-center gap-3 px-5 py-2.5 transition hover:bg-page sm:px-6 lg:px-8">
+                  <TxBadge type={tx.type} category={category} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[14.5px] font-semibold leading-snug">{title}</div>
+                    <div className="mt-0.5 flex items-center gap-1.5 truncate text-[12px] font-medium text-muted">
+                      <span className="truncate">
+                        {tx.type === "transfer" ? "Transfer" : category ?? (tx.type === "expense" ? "No category" : "Income")}
+                        {person && ` · ${person}`}
+                        {` · ${account}`}
+                      </span>
+                      {flags.map(([label, dot]) => (
+                        <span key={label} className="flex shrink-0 items-center gap-1 font-bold text-ink/70">
+                          <span className={"h-1.5 w-1.5 rounded-full " + dot} />{label}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1 sm:gap-3">
-                    <span className={"num text-[15px] font-bold " + (tx.type === "income" ? "text-good" : "")}>
-                      {tx.type === "income" ? "+" : ""}{pkr(Number(tx.amount))}
-                    </span>
-                    {/* Deleting is rare; reading the row is constant. On a phone
-                        the bin hides behind ⋯ so its width goes to the
-                        description; from sm: up it sits in the row as before.
-                        Still reachable on a phone — there is no other delete. */}
-                    <details className="group relative sm:hidden">
-                      <summary
-                        aria-label={`More actions for ${tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense")}`}
-                        className="flex h-8 w-7 cursor-pointer list-none items-center justify-center rounded-full text-muted transition group-open:bg-page"
-                      >
-                        <MoreHorizontal size={16} strokeWidth={2.4} />
-                      </summary>
-                      {/* Edit and delete are siblings here: a <form> (inside
-                          ConfirmDelete) must never sit inside an <a>. */}
-                      <div className="absolute right-0 z-10 mt-1 flex items-center rounded-full bg-card p-0.5 shadow-soft">
-                        <Link
-                          href={`/ledger/${tx.id}`}
-                          aria-label={`Edit ${tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense")}`}
-                          className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition hover:bg-page hover:text-ink"
-                        >
-                          <Pencil size={15} strokeWidth={2.2} />
-                        </Link>
-                        <ConfirmDelete
-                          id={tx.id}
-                          label={tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense")}
-                          action={deleteTransaction}
-                          noun="transaction"
-                        />
-                      </div>
-                    </details>
-
-                    <Link
-                      href={`/ledger/${tx.id}`}
-                      aria-label={`Edit ${tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense")}`}
-                      className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-page hover:text-ink sm:flex"
-                    >
-                      <Pencil size={15} strokeWidth={2.2} />
-                    </Link>
-
-                    <span className="hidden sm:block">
-                      <ConfirmDelete
-                        id={tx.id}
-                        label={tx.description || category || (tx.type === "transfer" ? "Transfer" : tx.type === "income" ? "Income" : "Expense")}
-                        action={deleteTransaction}
-                        noun="transaction"
-                      />
-                    </span>
-                  </div>
-                </div>
+                  <span className={"num shrink-0 text-[14.5px] font-bold " +
+                    (tx.type === "income" ? "text-good" : tx.type === "transfer" ? "text-muted" : "")}>
+                    {tx.type === "income" ? "+" : ""}{pkr(Number(tx.amount))}
+                  </span>
+                </Link>
 
                 {/* Compact: silent unless this row actually has notes, and then
                     one folded line — an open composer under all 56 rows is what
@@ -340,5 +319,33 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
         </div>
       )}
     </Shell>
+  );
+}
+
+/**
+ * A round badge per row so the eye can scan by kind: the category's initial
+ * on its colour for spending, arrows for money in and money moved.
+ */
+function TxBadge({ type, category }: { type: string; category: string | null }) {
+  if (type === "income" || type === "transfer") {
+    const Icon = type === "income" ? ArrowDownLeft : ArrowLeftRight;
+    return (
+      <span className={"flex h-9 w-9 shrink-0 items-center justify-center rounded-full " +
+        (type === "income" ? "bg-good/10 text-good" : "bg-page text-muted")}>
+        <Icon size={16} strokeWidth={2.4} />
+      </span>
+    );
+  }
+  const name = category ?? "?";
+  let h = 0;
+  for (let c = 0; c < name.length; c++) h = (h * 31 + name.charCodeAt(c)) >>> 0;
+  // The donut palette minus ink, which would put a black letter on near-black.
+  const BADGE = ["#E2FB4F", "#3E7CB1", "#F2C14E", "#7FB77E", "#9B6FC7", "#E98D7C"];
+  const color = category ? BADGE[h % BADGE.length] : "#E7E7E3";
+  return (
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-extrabold text-ink"
+      style={{ background: color + "55" }}>
+      {name.charAt(0).toUpperCase()}
+    </span>
   );
 }

@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { db, t } from "@/db/client";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { requireContext } from "@/lib/session";
 
 /**
@@ -85,6 +85,49 @@ export async function setCategoryArchived(formData: FormData) {
   await db().update(t.categories)
     .set({ isArchived: formData.get("archived") === "1" })
     .where(and(eq(t.categories.householdId, household.id), eq(t.categories.id, id)));
+  revalidatePath("/settings", "layout");
+}
+
+/**
+ * Fold one category into another: every entry and import rule that pointed at
+ * `from` now points at `into`, and `from` is archived (never deleted, so the
+ * name survives in filters if anyone goes looking). Amounts do not change —
+ * only which bucket they sit in. One batch, so it is all or nothing.
+ */
+export async function mergeCategory(formData: FormData) {
+  const { household } = await requireContext();
+  const from = Number(formData.get("id"));
+  const into = Number(formData.get("into"));
+  if (!from || !into || from === into) return;
+
+  const both = await db().select({ id: t.categories.id }).from(t.categories)
+    .where(and(eq(t.categories.householdId, household.id), inArray(t.categories.id, [from, into])));
+  if (both.length !== 2) return;
+
+  await db().batch([
+    db().update(t.transactions).set({ categoryId: into })
+      .where(and(eq(t.transactions.householdId, household.id), eq(t.transactions.categoryId, from))),
+    db().update(t.importRules).set({ setCategoryId: into })
+      .where(and(eq(t.importRules.householdId, household.id), eq(t.importRules.setCategoryId, from))),
+    db().update(t.categories).set({ isArchived: true })
+      .where(and(eq(t.categories.householdId, household.id), eq(t.categories.id, from)))
+  ]);
+  revalidatePath("/settings", "layout");
+  revalidatePath("/ledger");
+  revalidatePath("/");
+}
+
+/** Add several suggested categories in one tap, skipping any that exist. */
+export async function addSuggestedCategories(formData: FormData) {
+  const { household } = await requireContext();
+  const names = formData.getAll("name").map((n) => String(n).trim()).filter(Boolean);
+  if (names.length === 0) return;
+  const existing = await db().select({ name: t.categories.name }).from(t.categories)
+    .where(eq(t.categories.householdId, household.id));
+  const have = new Set(existing.map((c) => c.name.toLowerCase()));
+  const fresh = names.filter((n) => !have.has(n.toLowerCase()));
+  if (fresh.length === 0) return;
+  await db().insert(t.categories).values(fresh.map((name) => ({ householdId: household.id, name })));
   revalidatePath("/settings", "layout");
 }
 
@@ -171,4 +214,24 @@ export async function setOpeningBalance(formData: FormData) {
   revalidatePath("/settings", "layout");
   revalidatePath("/");
   revalidatePath("/assets");
+}
+
+/**
+ * Save every category's planned monthly amount at once. A blank field means
+ * "no plan for this one", not zero — a zero plan would flag any spend as over.
+ */
+export async function saveCategoryBudgets(formData: FormData) {
+  const { household } = await requireContext();
+  const cats = await db().select({ id: t.categories.id }).from(t.categories)
+    .where(eq(t.categories.householdId, household.id));
+  if (cats.length === 0) redirect("/settings/budget");
+  await db().batch(cats.map((c) => {
+    const raw = String(formData.get(`b_${c.id}`) ?? "").trim();
+    const v = raw === "" ? null : Math.max(0, Number(raw));
+    return db().update(t.categories)
+      .set({ monthlyBudget: v == null || !isFinite(v) ? null : v.toFixed(2) })
+      .where(and(eq(t.categories.householdId, household.id), eq(t.categories.id, c.id)));
+  }) as any);
+  revalidatePath("/settings", "layout"); revalidatePath("/");
+  redirect("/settings/budget?saved=1");
 }

@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { Pencil, ArrowDown, ArrowUp } from "lucide-react";
-import ConfirmDelete from "@/components/ConfirmDelete";
-import { deleteTransaction } from "@/actions/ledger";
 import { pkr } from "@/lib/money";
 
 /**
@@ -176,7 +174,6 @@ export default function LedgerTable({
                     >
                       <Pencil size={14} strokeWidth={2.2} />
                     </Link>
-                    <ConfirmDelete id={tx.id} label={name} action={deleteTransaction} noun="transaction" />
                   </span>
                 </Td>
               </tr>

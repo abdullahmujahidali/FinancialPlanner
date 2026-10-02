@@ -46,3 +46,24 @@ export async function logout() {
   await clearSession();
   redirect("/login");
 }
+
+/**
+ * Change your own password. The current one is required, so a phone left
+ * unlocked on the table cannot be used to lock its owner out.
+ */
+export async function changePassword(formData: FormData) {
+  const { requireContext } = await import("@/lib/session");
+  const { user } = await requireContext();
+  const current = String(formData.get("current") || "");
+  const next = String(formData.get("next") || "");
+  const confirm = String(formData.get("confirm") || "");
+
+  const back = (e: string) => redirect(`/settings/password?e=${encodeURIComponent(e)}`);
+  if (!(await bcrypt.compare(current, user.passwordHash))) back("The current password is wrong.");
+  if (next.length < 8) back("The new password needs at least 8 characters.");
+  if (next !== confirm) back("The two new passwords don't match.");
+  if (next === current) back("The new password is the same as the old one.");
+
+  await db().update(t.users).set({ passwordHash: await bcrypt.hash(next, 10) }).where(eq(t.users.id, user.id));
+  redirect("/settings/password?ok=1");
+}

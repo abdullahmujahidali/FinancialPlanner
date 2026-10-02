@@ -2,9 +2,9 @@ import Link from "next/link";
 import Shell from "@/components/Shell";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { logout } from "@/actions/auth";
-import { Home, Landmark, Tags, Users, UserCog, Wand2, ChevronRight, LogOut } from "lucide-react";
+import { Home, Landmark, Tags, Users, UserCog, Wand2, ChevronRight, LogOut, KeyRound, Repeat, PieChart } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -19,12 +19,14 @@ export default async function SettingsHub() {
   const { user, household, role } = await requireContext();
   const owner = role === "owner";
 
-  const [[accounts], [categories], [persons], [members], [rules]] = await Promise.all([
+  const [[accounts], [categories], [persons], [members], [rules], [regular]] = await Promise.all([
     db().select({ v: sql<string>`count(*)` }).from(t.accounts).where(eq(t.accounts.householdId, household.id)),
     db().select({ v: sql<string>`count(*)` }).from(t.categories).where(eq(t.categories.householdId, household.id)),
     db().select({ v: sql<string>`count(*)` }).from(t.persons).where(eq(t.persons.householdId, household.id)),
     db().select({ v: sql<string>`count(*)` }).from(t.memberships).where(eq(t.memberships.householdId, household.id)),
-    db().select({ v: sql<string>`count(*)` }).from(t.importRules).where(eq(t.importRules.householdId, household.id))
+    db().select({ v: sql<string>`count(*)` }).from(t.importRules).where(eq(t.importRules.householdId, household.id)),
+    db().select({ v: sql<string>`count(*)` }).from(t.recurring)
+      .where(and(eq(t.recurring.householdId, household.id), eq(t.recurring.isArchived, false)))
   ]);
 
   const plural = (n: string, word: string) => `${n} ${word}${Number(n) === 1 ? "" : "s"}`;
@@ -59,6 +61,20 @@ export default async function SettingsHub() {
       meta: `${persons.v} people`
     },
     {
+      href: "/settings/budget",
+      Icon: PieChart,
+      label: "Budget breakdown",
+      hint: "Split the monthly budget across categories",
+      meta: ""
+    },
+    {
+      href: "/settings/regular",
+      Icon: Repeat,
+      label: "Regular payments",
+      hint: "Monthly payments offered for one-tap entry",
+      meta: plural(regular.v, "payment")
+    },
+    {
       href: "/settings/members",
       Icon: UserCog,
       label: "Members",
@@ -72,6 +88,13 @@ export default async function SettingsHub() {
       label: "Import rules",
       hint: "Auto-categorise imported bank rows",
       meta: plural(rules.v, "rule")
+    },
+    {
+      href: "/settings/password",
+      Icon: KeyRound,
+      label: "Password",
+      hint: "Change the password you sign in with",
+      meta: ""
     }
   ];
 

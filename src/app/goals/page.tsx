@@ -1,9 +1,9 @@
 import Shell from "@/components/Shell";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { addGoal, contributeToGoal, completeGoal } from "@/actions/portfolio";
-import { pkr } from "@/lib/money";
+import { pkr, monthKey, monthLabel, monthRange } from "@/lib/money";
 import { Plus, Check, Target } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { getGoalForecasts, etaLabel } from "@/lib/forecast";
@@ -21,6 +21,26 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
       .from(t.goalContributions).where(eq(t.goalContributions.goalId, g.id));
     sums.set(g.id, Number(s.v));
   }
+
+  // Last month's leftover, offered as a one-tap contribution. Without this the
+  // goals sit at zero until someone remembers to type savings in by hand.
+  const now = new Date();
+  const lastM = monthKey(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+  const { from: lf, next: ln } = monthRange(lastM);
+  const sweepNote = `Left over from ${monthLabel(lastM)}`;
+  const openGoals = goals.filter((g) => g.status !== "done");
+  const [[flow], swept] = await Promise.all([
+    db().select({
+      income: sql<string>`coalesce(sum(case when ${t.transactions.type} = 'income' then ${t.transactions.amount} end), 0)`,
+      out: sql<string>`coalesce(sum(case when ${t.transactions.type} = 'expense' then ${t.transactions.amount} end), 0)`
+    }).from(t.transactions)
+      .where(and(eq(t.transactions.householdId, household.id), gte(t.transactions.txDate, lf), lt(t.transactions.txDate, ln))),
+    openGoals.length
+      ? db().select({ v: sql<string>`coalesce(sum(${t.goalContributions.amount}),0)` }).from(t.goalContributions)
+          .where(and(inArray(t.goalContributions.goalId, goals.map((g) => g.id)), eq(t.goalContributions.note, sweepNote)))
+      : Promise.resolve([{ v: "0" }])
+  ]);
+  const leftover = Math.round(Number(flow.income) - Number(flow.out) - Number(swept[0].v));
 
   const forecasts = await getGoalForecasts(household.id, Number(household.monthlyBudget));
   const fc = new Map(forecasts.map((f) => [f.goalId, f]));
@@ -43,6 +63,30 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
         {/* ── Goal cards ───────────────────────────────────────────────── */}
         <div className="flex flex-col gap-5 lg:w-1/2 lg:shrink-0">
+          {openGoals.length > 0 && leftover > 0 && (
+            <section className="zone-acid">
+              <h2 className="eyebrow">{monthLabel(lastM)} left over</h2>
+              <p className="mt-2 text-[14px] font-semibold leading-relaxed text-ink/75">
+                {pkr(Number(flow.income))} came in and {pkr(Number(flow.out))} went out
+                {Number(swept[0].v) > 0 && <>, and {pkr(Number(swept[0].v))} is already in goals</>}.
+                That leaves {pkr(leftover)} — put some of it toward a goal.
+              </p>
+              <form action={contributeToGoal} className="mt-4 grid gap-2.5 sm:grid-cols-[1fr_9rem_auto]">
+                <input type="hidden" name="note" value={sweepNote} />
+                <select name="goalId" className="field" required>
+                  {openGoals.map((g) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+                <input name="amount" type="number" inputMode="numeric" defaultValue={leftover} max={leftover}
+                  className="field num" />
+                <button className="btn px-4">
+                  <Plus size={17} strokeWidth={2.75} /> Add
+                </button>
+              </form>
+            </section>
+          )}
+
           {blockedWhy && (
             <p className="rounded-[14px] bg-page px-4 py-3 text-[13px] font-bold leading-snug">
               {blockedWhy}
@@ -113,35 +157,37 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
                   )}
                 </div>
 
+                {/* Adding savings is the common action; completing happens
+                    once. Both stay folded so the page reads as goals, not forms. */}
                 {!done && (
-                  <div className="space-y-5 bg-page p-6 lg:p-8">
-                    <form action={contributeToGoal} className="flex gap-2.5">
-                      <input type="hidden" name="goalId" value={g.id} />
-                      <input name="amount" type="number" inputMode="numeric" placeholder="Add savings"
-                        className="field num min-w-0" />
-                      <input name="note" placeholder="note" className="field min-w-0" />
-                      <button className="btn shrink-0 px-4" aria-label="Add contribution">
-                        <Plus size={17} strokeWidth={2.75} />
-                      </button>
-                    </form>
-
-                    <form action={completeGoal} className="space-y-3">
-                      <input type="hidden" name="goalId" value={g.id} />
-                      <label className="flex items-center gap-2 text-[13px] font-bold">
-                        <input type="checkbox" name="makeAsset" defaultChecked className="h-4 w-4 rounded accent-ink" />
-                        Convert to asset
-                      </label>
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <input name="assetName" placeholder="Asset name"
-                          className="field min-w-0 flex-1" />
-                        <input name="purchasePrice" type="number" inputMode="numeric" placeholder="Price"
-                          className="field num w-24 shrink-0 grow-0 px-3" />
-                        <button className="btn-quiet btn-sm shrink-0">
-                          <Check size={15} strokeWidth={3} />
-                          Complete
-                        </button>
-                      </div>
-                    </form>
+                  <div className="flex flex-wrap items-start gap-2 border-t border-line px-6 py-3 lg:px-8">
+                    <details className="min-w-0 flex-1">
+                      <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full bg-page px-4 py-2 text-[13px] font-bold transition hover:bg-line">
+                        <Plus size={14} strokeWidth={2.8} /> Add savings
+                      </summary>
+                      <form action={contributeToGoal} className="mt-3 grid gap-2.5 sm:grid-cols-[1fr_1fr_auto]">
+                        <input type="hidden" name="goalId" value={g.id} />
+                        <input name="amount" type="number" inputMode="numeric" placeholder="Amount" required
+                          className="field num" />
+                        <input name="note" placeholder="Note (optional)" className="field" />
+                        <button className="btn px-5">Save</button>
+                      </form>
+                    </details>
+                    <details className="min-w-0">
+                      <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-bold text-muted transition hover:bg-page hover:text-ink">
+                        <Check size={14} strokeWidth={3} /> Reached it
+                      </summary>
+                      <form action={completeGoal} className="mt-3 space-y-2.5">
+                        <input type="hidden" name="goalId" value={g.id} />
+                        <label className="flex items-center gap-2 text-[13px] font-bold">
+                          <input type="checkbox" name="makeAsset" defaultChecked className="h-4 w-4 rounded accent-ink" />
+                          Add what was bought as an asset
+                        </label>
+                        <input name="assetName" placeholder="Asset name, e.g. New car" className="field" />
+                        <input name="purchasePrice" type="number" inputMode="numeric" placeholder="Price paid" className="field num" />
+                        <button className="btn w-full">Mark goal complete</button>
+                      </form>
+                    </details>
                   </div>
                 )}
               </div>
