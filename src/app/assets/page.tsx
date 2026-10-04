@@ -5,7 +5,7 @@ import { db, t } from "@/db/client";
 import { asc, desc, eq } from "drizzle-orm";
 import { addAsset, revalueAsset, sellAsset, deleteAsset } from "@/actions/portfolio";
 import { pkr, todayStr } from "@/lib/money";
-import { Plus, Building2, ChevronRight, MoreHorizontal } from "lucide-react";
+import { Plus, Building2, ChevronRight, MoreHorizontal, Pencil } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { getBalances } from "@/lib/balances";
 import { getLoanNet } from "@/lib/loans";
@@ -190,7 +190,12 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                             below — that keeps the history. Deleting erases this asset and
                             every valuation on it.
                           </p>
-                          <div className="mt-2 flex justify-end">
+                          <div className="mt-2 flex items-center justify-between gap-2">
+                            <Link href={`/assets/${a.id}#edit`}
+                              className="inline-flex items-center gap-1.5 rounded-full bg-page px-3.5 py-2 text-[13px] font-bold transition hover:bg-line">
+                              <Pencil size={13} strokeWidth={2.4} />
+                              Edit details
+                            </Link>
                             <ConfirmDelete id={a.id} label={a.name} action={deleteAsset} noun="asset"
                               consequence="Its value history and any photos go with it — selling keeps all of that." />
                           </div>
@@ -220,6 +225,10 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                             <button className="btn-quiet btn-sm shrink-0">Sold</button>
                           </form>
                         </div>
+                        <Link href={`/assets/${a.id}#edit`}
+                          className="mt-3 inline-block text-[13px] font-bold text-muted underline underline-offset-2 transition hover:text-ink">
+                          Fix the name, price or date
+                        </Link>
                       </details>
                     )}
                   </div>

@@ -222,8 +222,8 @@ export default async function AssetDetailPage({
           </section>
 
           {/* ── Edit ───────────────────────────────────────────────────── */}
-          <section className="zone-card">
-            <h2 className="eyebrow text-muted">Edit asset</h2>
+          <section id="edit" className="zone-card scroll-mt-6">
+            <h2 className="eyebrow text-muted">Edit name, price or date</h2>
             <form action={updateAsset} className="mt-6 space-y-4">
               <input type="hidden" name="id" value={asset.id} />
               <input name="name" defaultValue={asset.name} className="field" required />
