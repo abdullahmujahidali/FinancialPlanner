@@ -28,6 +28,48 @@ export type AccountBalance = {
   movement: number;
 };
 
+type MovementRow = {
+  accountId: number;
+  counterAccountId: number | null;
+  type: string;
+  amount: string | number;
+  txDate: string;
+};
+
+/**
+ * Signed movement per account. Income adds, expense subtracts (a refund is a
+ * negative expense, so it adds back). A transfer debits `accountId` and
+ * credits `counterAccountId`; a loan repayment received has no counter account
+ * and is stored negative, so the debit turns into a credit.
+ * Movement before an account's opening date is already inside that figure.
+ */
+export function accountMovement(rows: MovementRow[], openingOf: Map<number, string | null>) {
+  const movement = new Map<number, number>();
+  const bump = (id: number | null, v: number) => {
+    if (id == null) return;
+    movement.set(id, (movement.get(id) ?? 0) + v);
+  };
+  const counts = (accountId: number | null, txDate: string) => {
+    if (accountId == null) return false;
+    const from = openingOf.get(accountId);
+    return !from || txDate >= from;
+  };
+
+  for (const r of rows) {
+    const amt = Number(r.amount);
+    if (r.type === "income") {
+      if (counts(r.accountId, r.txDate)) bump(r.accountId, amt);
+    } else if (r.type === "expense") {
+      if (counts(r.accountId, r.txDate)) bump(r.accountId, -amt);
+    } else if (r.type === "transfer") {
+      // Out of one account, into the other.
+      if (counts(r.accountId, r.txDate)) bump(r.accountId, -amt);
+      if (counts(r.counterAccountId, r.txDate)) bump(r.counterAccountId, amt);
+    }
+  }
+  return movement;
+}
+
 export async function getBalances(householdId: number): Promise<{
   accounts: AccountBalance[];
   /** Sum of the accounts whose balance is known. */
@@ -59,32 +101,7 @@ export async function getBalances(householdId: number): Promise<{
     .from(t.transactions)
     .where(eq(t.transactions.householdId, householdId));
 
-  const movement = new Map<number, number>();
-  const bump = (id: number | null, v: number) => {
-    if (id == null) return;
-    movement.set(id, (movement.get(id) ?? 0) + v);
-  };
-
-  const openingOf = new Map(accounts.map((a) => [a.id, a.openingDate]));
-  /** Movement before an account's opening date is already inside that figure. */
-  const counts = (accountId: number | null, txDate: string) => {
-    if (accountId == null) return false;
-    const from = openingOf.get(accountId);
-    return !from || txDate >= from;
-  };
-
-  for (const r of rows) {
-    const amt = Number(r.amount);
-    if (r.type === "income") {
-      if (counts(r.accountId, r.txDate)) bump(r.accountId, amt);
-    } else if (r.type === "expense") {
-      if (counts(r.accountId, r.txDate)) bump(r.accountId, -amt);
-    } else if (r.type === "transfer") {
-      // Out of one account, into the other.
-      if (counts(r.accountId, r.txDate)) bump(r.accountId, -amt);
-      if (counts(r.counterAccountId, r.txDate)) bump(r.counterAccountId, amt);
-    }
-  }
+  const movement = accountMovement(rows, new Map(accounts.map((a) => [a.id, a.openingDate])));
 
   const out: AccountBalance[] = accounts.map((a) => {
     const move = movement.get(a.id) ?? 0;

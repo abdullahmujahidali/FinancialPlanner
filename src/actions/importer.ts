@@ -8,6 +8,7 @@ import { parseMeezan } from "@/lib/meezan";
 import { parseWithMap, sniffCsv, type ColumnMap, type SniffResult } from "@/lib/csv";
 import { classifyRows, type Rule } from "@/lib/rules";
 import { notify } from "@/actions/notifications";
+import { matchImportedRows } from "@/lib/loan-ledger";
 
 /**
  * Step 1 of the import flow: look at an uploaded CSV and report where its
@@ -80,6 +81,7 @@ export async function importStatement(formData: FormData) {
   }).returning();
 
   let imported = 0, dups = 0, ignored = 0;
+  const inserted: Array<{ id: number; type: string; amount: number; txDate: string }> = [];
   for (const c of classified) {
     if (c.action === "ignore") { ignored++; continue; }
     const amount = (c.row.debit || c.row.credit).toFixed(2);
@@ -95,8 +97,15 @@ export async function importStatement(formData: FormData) {
       docNo: c.row.docNo || null, fingerprint: c.row.fingerprint, createdBy: user.id
     };
     const res = await db().insert(t.transactions).values(values).onConflictDoNothing().returning({ id: t.transactions.id });
-    if (res.length) imported++; else dups++;
+    if (res.length) {
+      imported++;
+      inserted.push({ id: res[0].id, type: values.type, amount: Number(amount), txDate: values.txDate });
+    } else dups++;
   }
+
+  // Rows that are really loan payments already recorded on /loans become
+  // those payments' transfers instead of counting as spending or income.
+  const loanMatched = await matchImportedRows(household.id, accountId, inserted);
 
   // balance tie-out: opening + credits - debits should equal closing
   let balanceOk: boolean | null = null;
@@ -119,6 +128,7 @@ export async function importStatement(formData: FormData) {
     title: `${imported} transaction${imported === 1 ? "" : "s"} imported`,
     body:
       `${file.name}${dups ? ` · ${dups} duplicate${dups === 1 ? "" : "s"} skipped` : ""}` +
+      (loanMatched ? ` · ${loanMatched} matched to loan payment${loanMatched === 1 ? "" : "s"}` : "") +
       (balanceOk === false ? " · balance tie-out did NOT match" : balanceOk ? " · balance tie-out passed" : ""),
     href: "/ledger"
   });

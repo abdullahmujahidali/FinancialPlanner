@@ -295,7 +295,8 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                   </div>
                   <span className={"num shrink-0 text-[14.5px] font-bold " +
                     (tx.type === "income" || isRefund ? "text-good" : tx.type === "transfer" ? "text-muted" : "")}>
-                    {tx.type === "income" ? "+" : ""}{pkr(Number(tx.amount))}
+                    {tx.type === "income" || (tx.type === "transfer" && Number(tx.amount) < 0) ? "+" : ""}
+                    {pkr(tx.type === "transfer" ? Math.abs(Number(tx.amount)) : Number(tx.amount))}
                   </span>
                 </Link>
 

@@ -1,7 +1,8 @@
 import Shell from "@/components/Shell";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
+import Link from "next/link";
 import { addLoan, addLoanPayment, deleteLoan } from "@/actions/loans";
 import { getLoans, type LoanRow } from "@/lib/loans";
 import { pkr, todayStr } from "@/lib/money";
@@ -35,12 +36,19 @@ export default async function LoansPage({
       .orderBy(asc(t.accounts.name))
   ]);
 
-  const payments = await db().select().from(t.loanPayments);
+  // Only this household's loans: loan_payments is tenanted through them.
+  const [payments, assets] = await Promise.all([
+    loans.length
+      ? db().select().from(t.loanPayments).where(inArray(t.loanPayments.loanId, loans.map((l) => l.id)))
+      : Promise.resolve([]),
+    db().select({ id: t.assets.id, name: t.assets.name }).from(t.assets)
+      .where(eq(t.assets.householdId, household.id))
+  ]);
   const paymentsByLoan = new Map<number, typeof payments>();
   for (const p of payments) {
-    if (!loans.some((l) => l.id === p.loanId)) continue; // other households
     paymentsByLoan.set(p.loanId, [...(paymentsByLoan.get(p.loanId) ?? []), p]);
   }
+  const assetNames = new Map(assets.map((a) => [a.id, a.name]));
 
   const weOweList = loans.filter((l) => l.direction === "owed_by_us");
   const owedList = loans.filter((l) => l.direction === "owed_to_us");
@@ -109,6 +117,7 @@ export default async function LoansPage({
               loans={weOweList}
               accounts={accounts}
               paymentsByLoan={paymentsByLoan}
+              assetNames={assetNames}
             />
           )}
 
@@ -118,6 +127,7 @@ export default async function LoansPage({
               loans={owedList}
               accounts={accounts}
               paymentsByLoan={paymentsByLoan}
+              assetNames={assetNames}
             />
           )}
         </div>
@@ -190,9 +200,11 @@ function LoanGroup({
   title,
   loans,
   accounts,
-  paymentsByLoan
+  paymentsByLoan,
+  assetNames
 }: {
   title: string;
+  assetNames: Map<number, string>;
   loans: LoanRow[];
   accounts: Array<{ id: number; name: string }>;
   paymentsByLoan: Map<number, Array<{ id: number; amount: string; paidOn: string; note: string | null }>>;
@@ -221,6 +233,12 @@ function LoanGroup({
                       {l.note ? `${l.note} · ` : ""}since {fmtDate(l.startedOn)}
                       {l.dueOn && ` · due ${fmtDate(l.dueOn)}`}
                     </div>
+                    {l.assetId && assetNames.has(l.assetId) && (
+                      <Link href={`/assets/${l.assetId}`}
+                        className="mt-1 inline-block text-[12.5px] font-bold underline underline-offset-2">
+                        For {assetNames.get(l.assetId)}
+                      </Link>
+                    )}
                   </div>
                   <div className="shrink-0 text-right">
                     <div className="num text-[17px] font-extrabold">
@@ -281,7 +299,7 @@ function LoanGroup({
                         ))}
                       </select>
                       <p className="text-[12px] leading-snug text-muted sm:col-span-2">
-                        Picking a bank also adds a transfer to the ledger so its balance stays right. Never counted as spending.
+                        Picking a bank adds a transfer to the ledger so its balance stays right — or, if the bank import already has this payment, turns that row into the transfer. Never counted as spending.
                       </p>
                       <button className="btn sm:col-span-2">
                         <Check size={16} strokeWidth={3} /> Save

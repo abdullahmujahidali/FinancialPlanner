@@ -165,8 +165,8 @@ export default function LedgerTable({
                     (tx.type === "income" ? "text-good" : "")
                   }
                 >
-                  {tx.type === "income" ? "+" : ""}
-                  {pkr(Number(tx.amount))}
+                  {tx.type === "income" || (tx.type === "transfer" && Number(tx.amount) < 0) ? "+" : ""}
+                  {pkr(tx.type === "transfer" ? Math.abs(Number(tx.amount)) : Number(tx.amount))}
                 </Td>
 
                 <Td>

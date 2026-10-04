@@ -5,6 +5,8 @@ import { db, t } from "@/db/client";
 import { and, eq, sql } from "drizzle-orm";
 import { requireContext } from "@/lib/session";
 import { todayStr } from "@/lib/money";
+import { recordLoanPayment, refreshLoanStatus, releaseLedgerRow } from "@/lib/loan-ledger";
+import type { Direction } from "@/lib/match";
 
 const DIRECTIONS = new Set(["owed_by_us", "owed_to_us"]);
 
@@ -57,88 +59,38 @@ export async function addLoan(formData: FormData) {
 /**
  * Record money moving against a loan.
  *
- * When an account is chosen the matching ledger row is written too, as a
- * `transfer` — money leaving for a repayment is not spending, and counting it
- * as such would inflate the month's expenses and eat the incentive. When no
- * account is chosen the payment is recorded on the loan alone, which is how
- * cash handed over in person gets logged.
+ * When an account is chosen the payment gets a ledger row as a `transfer` —
+ * money leaving for a repayment is not spending, and counting it as such would
+ * inflate the month and eat the incentive. If the bank import already brought
+ * that row in, it is adopted rather than doubled (see `recordLoanPayment`).
+ * When no account is chosen the payment is recorded on the loan alone, which
+ * is how cash handed over in person gets logged.
  */
 export async function addLoanPayment(formData: FormData) {
   const { household, user } = await requireContext();
   const loanId = rowId(formData.get("loanId"));
   const amount = Number(formData.get("amount") || 0);
+  const back = String(formData.get("back") || "") === "asset" ? "asset" : "loans";
   if (!loanId || !amount || amount <= 0) redirect("/loans?e=Enter+an+amount");
 
   const loan = await ownedLoan(household.id, loanId);
   if (!loan) redirect("/loans?e=That+loan+was+not+found");
 
-  const paidOn = String(formData.get("paidOn") || todayStr());
-  const accountId = rowId(formData.get("accountId"));
-  let transactionId: number | null = null;
-
-  if (accountId) {
-    // Confirm the account is this household's before pointing a row at it.
-    const [account] = await db()
-      .select()
-      .from(t.accounts)
-      .where(and(eq(t.accounts.householdId, household.id), eq(t.accounts.id, accountId)));
-
-    if (account) {
-      const repaying = loan.direction === "owed_by_us";
-      const [tx] = await db()
-        .insert(t.transactions)
-        .values({
-          householdId: household.id,
-          accountId: account.id,
-          type: "transfer",
-          amount: amount.toFixed(2),
-          txDate: paidOn,
-          description: repaying
-            ? `Loan repayment to ${loan.counterparty}`
-            : `Loan repaid by ${loan.counterparty}`,
-          createdBy: user.id
-        })
-        .returning();
-      transactionId = tx.id;
-    }
-  }
-
-  await db().insert(t.loanPayments).values({
-    loanId: loan.id,
-    amount: amount.toFixed(2),
-    paidOn,
+  await recordLoanPayment({
+    loan,
+    amount,
+    paidOn: String(formData.get("paidOn") || todayStr()),
+    accountId: rowId(formData.get("accountId")),
     note: String(formData.get("note") || "").trim() || null,
-    transactionId,
-    createdBy: user.id
+    userId: user.id
   });
-
-  await refreshLoanStatus(loan.id, Number(loan.principal));
 
   revalidatePath("/loans");
   revalidatePath("/");
   revalidatePath("/assets");
   revalidatePath("/ledger");
-}
-
-/**
- * A loan settles itself once its payments cover the principal, and un-settles
- * if a payment is later removed. Deriving the status from the payments means
- * the two can never disagree.
- */
-async function refreshLoanStatus(loanId: number, principal: number) {
-  const [paid] = await db()
-    .select({ v: sql<string>`coalesce(sum(${t.loanPayments.amount}),0)` })
-    .from(t.loanPayments)
-    .where(eq(t.loanPayments.loanId, loanId));
-
-  const settled = Number(paid.v) >= principal;
-  await db()
-    .update(t.loans)
-    .set({
-      status: settled ? "settled" : "open",
-      settledOn: settled ? todayStr() : null
-    })
-    .where(eq(t.loans.id, loanId));
+  if (loan.assetId) revalidatePath(`/assets/${loan.assetId}`);
+  if (back === "asset" && loan.assetId) redirect(`/assets/${loan.assetId}`);
 }
 
 export async function deleteLoanPayment(formData: FormData) {
@@ -157,17 +109,10 @@ export async function deleteLoanPayment(formData: FormData) {
 
   await db().delete(t.loanPayments).where(eq(t.loanPayments.id, paymentId));
 
-  // A payment that wrote a ledger row takes that row with it, otherwise the
-  // account balance keeps a movement that no longer happened.
+  // A row the payment wrote goes with it, otherwise the account balance keeps
+  // a movement that no longer happened. An adopted bank row stays.
   if (payment.transactionId) {
-    await db()
-      .delete(t.transactions)
-      .where(
-        and(
-          eq(t.transactions.householdId, household.id),
-          eq(t.transactions.id, payment.transactionId)
-        )
-      );
+    await releaseLedgerRow(household.id, payment.transactionId, loan.direction as Direction);
   }
 
   await refreshLoanStatus(loan.id, Number(loan.principal));
@@ -205,7 +150,8 @@ export async function updateLoan(formData: FormData) {
 }
 
 /**
- * Deleting a loan takes its payments with it, and any ledger rows they wrote.
+ * Deleting a loan takes its payments with it, and any ledger rows they wrote
+ * (bank rows they adopted stay, back in the review queue).
  *
  * Loans are deletable where assets are not: an asset carries a purchase price
  * and a value history that the net worth figure is built on, while a loan
@@ -230,9 +176,7 @@ export async function deleteLoan(formData: FormData) {
   await db().delete(t.loanPayments).where(eq(t.loanPayments.loanId, loan.id));
 
   for (const txId of txIds) {
-    await db()
-      .delete(t.transactions)
-      .where(and(eq(t.transactions.householdId, household.id), eq(t.transactions.id, txId)));
+    await releaseLedgerRow(household.id, txId, loan.direction as Direction);
   }
 
   await db().delete(t.loans).where(eq(t.loans.id, loan.id));

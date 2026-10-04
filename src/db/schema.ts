@@ -179,6 +179,13 @@ export const loans = pgTable("loans", {
    */
   status: text("status").notNull().default("open"), // open | settled
   settledOn: date("settled_on"),
+  /**
+   * Set when the loan is what is still owed on an asset bought in
+   * installments (a plot, a car on a payment plan). The asset carries the
+   * full price, the loan carries what is left to pay, so net worth stays
+   * honest from the token payment onwards. Deleting the asset unlinks it.
+   */
+  assetId: integer("asset_id").references(() => assets.id, { onDelete: "set null" }),
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").notNull().defaultNow()
 }, (t) => ({

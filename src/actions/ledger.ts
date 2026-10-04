@@ -75,10 +75,13 @@ export async function updateTransaction(formData: FormData) {
   const type = refund ? "expense" : String(formData.get("type") || "expense");
   const entered = Number(formData.get("amount") || 0);
   if (!entered || entered <= 0) redirect(`/ledger/${id}?e=Enter+an+amount`);
-  const amount = refund ? -entered : entered;
   const accountId = Number(formData.get("accountId"));
   if (!Number.isInteger(accountId) || accountId <= 0) redirect(`/ledger/${id}?e=Pick+an+account`);
   const counter = formData.get("counterAccountId");
+  // A loan repayment received is a transfer in with no "to" account, stored
+  // negative (see loanTransferAmount). The form shows it positive.
+  const inbound = type === "transfer" && !counter && formData.get("inbound") === "1";
+  const amount = refund || inbound ? -entered : entered;
   const categoryId = formData.get("categoryId") ? Number(formData.get("categoryId")) : null;
   const personId = formData.get("personId") ? Number(formData.get("personId")) : null;
 

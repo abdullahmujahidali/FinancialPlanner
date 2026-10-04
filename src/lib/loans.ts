@@ -1,5 +1,6 @@
 import { db, t } from "@/db/client";
 import { eq, inArray, sql } from "drizzle-orm";
+import { loanBalance } from "@/lib/match";
 
 /**
  * Loan balances.
@@ -24,6 +25,8 @@ export type LoanRow = {
   note: string | null;
   status: string;
   settledOn: string | null;
+  /** The asset this loan is paying for, when it is an installment purchase. */
+  assetId: number | null;
 };
 
 export type LoanTotals = {
@@ -65,19 +68,21 @@ export async function getLoans(householdId: number): Promise<LoanTotals> {
     .map((r) => {
       const principal = Number(r.principal);
       const paid = paidBy.get(r.id) ?? 0;
+      const { outstanding, overpaid } = loanBalance(principal, paid);
       return {
         id: r.id,
         direction: r.direction as LoanRow["direction"],
         counterparty: r.counterparty,
         principal,
         paid,
-        outstanding: Math.max(0, principal - paid),
-        overpaid: Math.max(0, paid - principal),
+        outstanding,
+        overpaid,
         startedOn: r.startedOn,
         dueOn: r.dueOn,
         note: r.note,
         status: r.status,
-        settledOn: r.settledOn
+        settledOn: r.settledOn,
+        assetId: r.assetId
       };
     })
     // Open first, then the largest outstanding, so what needs attention leads.
@@ -134,7 +139,7 @@ export async function getLoanNet(householdId: number) {
   let owedToUs = 0;
   let overdue = 0;
   for (const r of rows) {
-    const outstanding = Math.max(0, Number(r.principal) - Number(r.paid));
+    const { outstanding } = loanBalance(Number(r.principal), Number(r.paid));
     if (r.direction === "owed_by_us") weOwe += outstanding;
     else owedToUs += outstanding;
     // A settled loan cannot be late, however long ago its date passed.

@@ -456,7 +456,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                       </span>
                     </span>
                     <span className={"num shrink-0 text-[14px] font-bold " + (r.type === "income" ? "text-good" : r.type === "transfer" ? "text-muted" : "")}>
-                      {r.type === "income" ? "+" : ""}{pkr(Number(r.amount))}
+                      {r.type === "income" || (r.type === "transfer" && Number(r.amount) < 0) ? "+" : ""}
+                      {pkr(r.type === "transfer" ? Math.abs(Number(r.amount)) : Number(r.amount))}
                     </span>
                   </Link>
                 </li>

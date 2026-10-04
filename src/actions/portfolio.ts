@@ -5,11 +5,31 @@ import { db, t } from "@/db/client";
 import { and, eq } from "drizzle-orm";
 import { requireContext } from "@/lib/session";
 import { todayStr } from "@/lib/money";
+import { startInstallments } from "@/lib/loan-ledger";
 
 const MAX_ATTACHMENT = 2 * 1024 * 1024;
 
+/** Ids arrive as form strings; anything that isn't a real row id is a no-op. */
+function rowId(v: FormDataEntryValue | null) {
+  const n = Number(v);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+/** The "still paying for it?" fields, shared by the add form and the asset page. */
+function installmentFields(formData: FormData, price: number) {
+  const seller = String(formData.get("seller") || "").trim();
+  const paidSoFar = Number(formData.get("paidSoFar") || 0);
+  if (!seller) return null;
+  return {
+    seller,
+    paidSoFar: Number.isFinite(paidSoFar) && paidSoFar > 0 ? Math.min(paidSoFar, price) : 0,
+    paidFrom: rowId(formData.get("paidFrom")),
+    paidOn: String(formData.get("paidOn") || todayStr())
+  };
+}
+
 export async function addAsset(formData: FormData) {
-  const { household } = await requireContext();
+  const { household, user } = await requireContext();
   const name = String(formData.get("name") || "").trim();
   const price = Number(formData.get("purchasePrice") || 0);
   if (!name || !price) redirect("/assets?e=Name+and+purchase+price+are+required");
@@ -19,6 +39,12 @@ export async function addAsset(formData: FormData) {
     purchasePrice: price.toFixed(2), notes: String(formData.get("notes") || "") || null
   }).returning();
   await db().insert(t.assetValues).values({ assetId: asset.id, valuedOn: purchaseDate, value: price.toFixed(2) });
+
+  const plan = installmentFields(formData, price);
+  if (plan) {
+    await startInstallments({ householdId: household.id, userId: user.id, asset, ...plan });
+    revalidatePath("/loans"); revalidatePath("/ledger");
+  }
 
   const file = formData.get("photo") as File | null;
   if (file && file.size > 0 && file.size <= MAX_ATTACHMENT) {
@@ -56,10 +82,19 @@ export async function sellAsset(formData: FormData) {
   revalidatePath("/assets"); revalidatePath("/");
 }
 
-/** Ids arrive as form strings; anything that isn't a real row id is a no-op. */
-function rowId(v: FormDataEntryValue | null) {
-  const n = Number(v);
-  return Number.isInteger(n) && n > 0 ? n : null;
+/** Set up installments on an asset already on the books. */
+export async function addInstallments(formData: FormData) {
+  const { household, user } = await requireContext();
+  const id = rowId(formData.get("assetId"));
+  if (!id) return;
+  const [asset] = await db().select().from(t.assets)
+    .where(and(eq(t.assets.householdId, household.id), eq(t.assets.id, id))).limit(1);
+  if (!asset) return;
+  const plan = installmentFields(formData, Number(asset.purchasePrice));
+  if (!plan) redirect(`/assets/${id}?e=Who+are+you+paying%3F`);
+  await startInstallments({ householdId: household.id, userId: user.id, asset, ...plan });
+  revalidatePath(`/assets/${id}`); revalidatePath("/assets"); revalidatePath("/loans");
+  revalidatePath("/ledger"); revalidatePath("/");
 }
 
 export async function updateAsset(formData: FormData) {

@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "db:push": "drizzle-kit push",
-    "seed": "tsx scripts/seed.mts"
+    "seed": "tsx scripts/seed.mts",
+    "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@heroui/react": "^3.2.6",

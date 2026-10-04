@@ -96,6 +96,8 @@ export default async function EditEntryPage({
         {/* the amount — the one thing this screen is for */}
         <div className="zone-acid">
           <label htmlFor="amount" className="eyebrow">Amount (PKR)</label>
+          {/* Money in from a loan is a negative transfer; keep it pointing in. */}
+          {tx.type === "transfer" && Number(tx.amount) < 0 && <input type="hidden" name="inbound" value="1" />}
           <input
             id="amount"
             name="amount"

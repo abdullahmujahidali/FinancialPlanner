@@ -2,13 +2,13 @@ import Link from "next/link";
 import Shell from "@/components/Shell";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { addAsset, revalueAsset, sellAsset, deleteAsset } from "@/actions/portfolio";
 import { pkr, todayStr } from "@/lib/money";
 import { Plus, Building2, ChevronRight, MoreHorizontal, Pencil } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { getBalances } from "@/lib/balances";
-import { getLoanNet } from "@/lib/loans";
+import { getLoanNet, getLoans } from "@/lib/loans";
 import ConfirmDelete from "@/components/ConfirmDelete";
 
 export const dynamic = "force-dynamic";
@@ -52,6 +52,20 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
   // owed in is. Only what is still outstanding counts.
   const { weOwe, owedToUs, net: loanNet } = await getLoanNet(household.id);
   const netWorth = assetTotal + cash + loanNet;
+
+  // Installment purchases: what is still owed on each asset, via its loan.
+  const [{ loans }, accounts] = await Promise.all([
+    getLoans(household.id),
+    db().select({ id: t.accounts.id, name: t.accounts.name }).from(t.accounts)
+      .where(and(eq(t.accounts.householdId, household.id), eq(t.accounts.isArchived, false)))
+      .orderBy(asc(t.accounts.name))
+  ]);
+  const owedOn = new Map<number, { outstanding: number; seller: string }>();
+  for (const l of loans) {
+    if (!l.assetId || l.outstanding <= 0) continue;
+    const prev = owedOn.get(l.assetId);
+    owedOn.set(l.assetId, { outstanding: (prev?.outstanding ?? 0) + l.outstanding, seller: l.counterparty });
+  }
   const byYear = new Map<string, typeof assets>();
   for (const a of assets) {
     const y = a.purchaseDate.slice(0, 4);
@@ -136,7 +150,9 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                 const delta = v.latest - Number(a.purchasePrice);
                 return (
                   <div key={a.id}
-                    className={"overflow-hidden rounded-[22px] bg-card " + (a.status === "sold" ? "opacity-60" : "")}>
+                    // No overflow-hidden: it clipped the ⋯ menu, which opens
+                    // past the card's bottom edge on a short card.
+                    className={"rounded-[22px] bg-card " + (a.status === "sold" ? "opacity-60" : "")}>
                     {/* The link and the delete button are siblings: a <form>
                         may never be nested inside an <a>. */}
                     <div className="flex items-start gap-2 p-5 lg:p-7">
@@ -158,6 +174,11 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                             <div className="num mt-1.5 text-[13px] font-medium text-muted">
                               Bought {a.purchaseDate.slice(0, 4)} for {pkr(Number(a.purchasePrice), { compact: true })}
                             </div>
+                            {owedOn.has(a.id) && (
+                              <div className="num mt-1 text-[13px] font-bold text-over">
+                                {pkr(owedOn.get(a.id)!.outstanding, { compact: true })} left to pay · {owedOn.get(a.id)!.seller}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5 text-right">
@@ -269,6 +290,30 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                 <input name="purchaseDate" type="date" defaultValue={todayStr()} className="field" />
               </div>
               <input name="notes" placeholder="Notes (optional)" className="field" />
+              {/* A plot on a token payment, a car on a plan: the asset takes the
+                  full price, a loan to the seller takes what is left, and the
+                  token goes to the ledger as a transfer — not as spending. */}
+              <details className="rounded-[14px] bg-ink/5 px-4 py-3">
+                <summary className="cursor-pointer list-none text-[13px] font-bold">
+                  Still paying for it? <span className="font-semibold text-ink/55">Token, installments</span>
+                </summary>
+                <div className="mt-3 space-y-3">
+                  <input name="seller" placeholder="Paying whom? e.g. the dealer or seller" className="field" />
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <input name="paidSoFar" type="number" inputMode="numeric" step="0.01"
+                      placeholder="Paid so far, e.g. token" className="field num" />
+                    <input name="paidOn" type="date" defaultValue={todayStr()} className="field" />
+                  </div>
+                  <select name="paidFrom" className="field" defaultValue="">
+                    <option value="">Paid in cash — no bank account</option>
+                    {accounts.map((ac) => <option key={ac.id} value={ac.id}>Paid from {ac.name}</option>)}
+                  </select>
+                  <p className="text-[12px] font-semibold leading-snug text-ink/55">
+                    The rest shows under Loans as owed to them. Payments never count as spending.
+                    If the bank statement already has this payment, it is matched, not doubled.
+                  </p>
+                </div>
+              </details>
               <label className="block">
                 <span className="eyebrow text-ink/55">Photo / papers — up to 2 MB</span>
                 <input name="photo" type="file" accept="image/*,.pdf" className="field mt-2 py-2.5" />
