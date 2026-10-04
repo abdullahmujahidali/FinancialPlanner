@@ -28,6 +28,15 @@ collapse without it).
   balances move net worth both ways; repayments are transfers, never spend, and
   may optionally write a real ledger row so account balances stay right.
 
+## Schema changes, tests, validation
+- Edit `src/db/schema.ts` → `npm run db:generate` → commit `drizzle/*.sql` →
+  `npm run db:migrate:prod` (production, `.env.prod-backup`) and `npm run db:migrate` (dev)
+  BEFORE pushing code that needs it. Never hand-run ALTERs or `drizzle-kit push`.
+  `0000_baseline` is recorded, not run, on the two pre-existing databases.
+- `npm test` (node:test via tsx, `tests/`). Server actions validate input with zod via
+  `src/lib/forms.ts` and check browser-sent account/category/person ids with `ownsRefs`.
+- Sentry is server-only and inert until `SENTRY_DSN` is set.
+
 ## Import pipeline (src/lib/meezan.ts + src/lib/rules.ts + src/actions/importer.ts)
 Meezan CSV: preamble rows (opening/closing balance) then `Booking Date,...` header.
 Dedupe via sha1 fingerprint (unique per household). Reversal pairs (ADJUSTMENT

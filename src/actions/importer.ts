@@ -9,6 +9,7 @@ import { parseWithMap, sniffCsv, type ColumnMap, type SniffResult } from "@/lib/
 import { classifyRows, type Rule } from "@/lib/rules";
 import { notify } from "@/actions/notifications";
 import { matchImportedRows } from "@/lib/loan-ledger";
+import { ownsRefs } from "@/lib/forms";
 
 /**
  * Step 1 of the import flow: look at an uploaded CSV and report where its
@@ -53,6 +54,7 @@ export async function importStatement(formData: FormData) {
   const file = formData.get("file") as File | null;
   const accountId = Number(formData.get("accountId"));
   if (!file || !accountId) redirect("/import?e=Pick+a+bank+account+and+a+CSV+file");
+  if (!(await ownsRefs(household.id, { accountIds: [accountId] }))) redirect("/import?e=That+account+was+not+found");
 
   const text = await file.text();
   const map = readColumnMap(formData.get("columnMap"));

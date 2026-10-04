@@ -5,6 +5,9 @@ import bcrypt from "bcryptjs";
 import { db, t } from "@/db/client";
 import { and, eq, inArray } from "drizzle-orm";
 import { requireContext } from "@/lib/session";
+import { z } from "zod";
+import { f, readForm } from "@/lib/forms";
+import { CURRENCY_CODES } from "@/lib/money";
 
 /**
  * Household settings.
@@ -20,13 +23,19 @@ import { requireContext } from "@/lib/session";
  */
 export async function updateHousehold(formData: FormData) {
   const { household, role } = await requireContext();
-  const incentivePct = role === "owner"
-    ? Number(formData.get("incentivePct") || 10)
-    : household.incentivePct;
+  const r = readForm(z.object({
+    name: f.text(120),
+    currency: z.enum(CURRENCY_CODES as [string, ...string[]]).optional().catch(undefined),
+    monthlyBudget: f.optMoney,
+    incentivePct: f.pct.optional().catch(undefined)
+  }), formData);
+  if (!r.ok) return;
+  const d = r.data;
+  const incentivePct = role === "owner" ? d.incentivePct ?? 10 : household.incentivePct;
   await db().update(t.households).set(({
-    name: String(formData.get("name") || household.name),
-    currency: String(formData.get("currency") || household.currency),
-    monthlyBudget: Number(formData.get("monthlyBudget") || 0).toFixed(2),
+    name: d.name || household.name,
+    currency: d.currency ?? household.currency,
+    monthlyBudget: (d.monthlyBudget ?? 0).toFixed(2),
     incentivePct,
     // Decides what the incentive is paid on, so it is the owner's call too.
     excludeOneOffs: role === "owner" ? formData.get("excludeOneOffs") === "on" : household.excludeOneOffs
@@ -204,13 +213,14 @@ export async function setOpeningBalance(formData: FormData) {
   const { household } = await requireContext();
   const id = Number(formData.get("id"));
   if (!id) return;
-  const raw = String(formData.get("openingBalance") || "").trim();
-  const date = String(formData.get("openingDate") || "").trim();
+  const r = readForm(z.object({ openingBalance: f.optSignedMoney, openingDate: f.optDate }), formData);
+  if (!r.ok) return;
+  const { openingBalance, openingDate } = r.data;
   await db().update(t.accounts)
     .set(({
       // Blank clears it back to "unknown" rather than storing a false zero.
-      openingBalance: raw === "" ? null : Number(raw).toFixed(2),
-      openingDate: raw === "" ? null : date || new Date().toISOString().slice(0, 10)
+      openingBalance: openingBalance === undefined ? null : openingBalance.toFixed(2),
+      openingDate: openingBalance === undefined ? null : openingDate ?? new Date().toISOString().slice(0, 10)
     } as any))
     .where(and(eq(t.accounts.householdId, household.id), eq(t.accounts.id, id)));
   revalidatePath("/settings", "layout");

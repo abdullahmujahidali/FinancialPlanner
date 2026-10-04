@@ -5,6 +5,9 @@ import { db, t } from "@/db/client";
 import { and, eq } from "drizzle-orm";
 import { requireContext } from "@/lib/session";
 import { notify } from "@/actions/notifications";
+import { z } from "zod";
+import { f, ownsRefs, readForm } from "@/lib/forms";
+import { todayStr } from "@/lib/money";
 
 const MAX_ATTACHMENT = 2 * 1024 * 1024;
 
@@ -19,32 +22,70 @@ async function saveAttachment(householdId: number, file: File | null, ref: { tra
   });
 }
 
+const txForm = z.object({
+  type: z.enum(["expense", "refund", "income", "transfer"]).default("expense"),
+  amount: f.money,
+  accountId: f.id.catch(0),
+  counterAccountId: f.optId,
+  categoryId: f.optId,
+  personId: f.optId,
+  txDate: f.optDate,
+  description: f.text(300),
+  isAbnormal: f.checkbox,
+  isPassthrough: f.checkbox,
+  needsReview: f.checkbox
+});
+
+/**
+ * One validated entry, as the database stores it. A refund is a negative
+ * expense in the original's category, so every total, balance and budget nets
+ * it out with no special casing. Returns an error message instead when the
+ * form is wrong or points at something that isn't this household's.
+ */
+async function readEntry(householdId: number, formData: FormData) {
+  const r = readForm(txForm, formData);
+  if (!r.ok) return { error: r.error } as const;
+  const d = r.data;
+  if (!d.accountId) return { error: "Pick an account" } as const;
+  const refund = d.type === "refund";
+  const type = refund ? "expense" : d.type;
+  const counterAccountId = type === "transfer" ? d.counterAccountId ?? null : null;
+  if (counterAccountId === d.accountId) return { error: "A transfer needs two different accounts" } as const;
+  const categoryId = type === "expense" ? d.categoryId ?? null : null;
+  const personId = d.personId ?? null;
+  const owned = await ownsRefs(householdId, {
+    accountIds: [d.accountId, counterAccountId], categoryIds: [categoryId], personIds: [personId]
+  });
+  if (!owned) return { error: "That account, category or person was not found" } as const;
+  return {
+    entry: {
+      type, refund, accountId: d.accountId, counterAccountId, categoryId, personId,
+      entered: d.amount,
+      txDate: d.txDate ?? todayStr(),
+      description: d.description,
+      isAbnormal: d.isAbnormal, isPassthrough: d.isPassthrough, needsReview: d.needsReview
+    }
+  } as const;
+}
+
 export async function addTransaction(formData: FormData) {
   const { user, household } = await requireContext();
-  // A refund is stored as a negative expense in the original's category, so
-  // every total, balance and budget nets it out with no special casing.
-  const refund = formData.get("type") === "refund";
-  const type = refund ? "expense" : String(formData.get("type") || "expense");
-  const entered = Number(formData.get("amount") || 0);
-  if (!entered || entered <= 0) redirect("/entry?e=Enter+an+amount");
-  const amount = refund ? -entered : entered;
-  const accountId = Number(formData.get("accountId"));
-  const counter = formData.get("counterAccountId");
-  const categoryId = formData.get("categoryId") ? Number(formData.get("categoryId")) : null;
-  const personId = formData.get("personId") ? Number(formData.get("personId")) : null;
+  const r = await readEntry(household.id, formData);
+  if (r.error !== undefined) redirect("/entry?e=" + encodeURIComponent(r.error));
+  const e = r.entry;
 
   const [tx] = await db().insert(t.transactions).values({
-    householdId: household.id, accountId,
-    type, counterAccountId: type === "transfer" && counter ? Number(counter) : null,
-    amount: amount.toFixed(2),
-    txDate: String(formData.get("txDate") || new Date().toISOString().slice(0, 10)),
-    description: String(formData.get("description") || "").trim(),
-    categoryId: type === "expense" ? categoryId : null,
-    personId,
-    isAbnormal: formData.get("isAbnormal") === "on",
-    isPassthrough: formData.get("isPassthrough") === "on",
-    needsReview: formData.get("needsReview") === "on",
-    reviewNote: String(formData.get("reviewNote") || "") || null,
+    householdId: household.id, accountId: e.accountId,
+    type: e.type, counterAccountId: e.counterAccountId,
+    amount: (e.refund ? -e.entered : e.entered).toFixed(2),
+    txDate: e.txDate,
+    description: e.description,
+    categoryId: e.categoryId,
+    personId: e.personId,
+    isAbnormal: e.isAbnormal,
+    isPassthrough: e.isPassthrough,
+    needsReview: e.needsReview,
+    reviewNote: String(formData.get("reviewNote") || "").trim().slice(0, 1000) || null,
     source: "manual", createdBy: user.id
   }).returning();
 
@@ -71,32 +112,26 @@ export async function updateTransaction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!Number.isInteger(id) || id <= 0) return;
 
-  const refund = formData.get("type") === "refund";
-  const type = refund ? "expense" : String(formData.get("type") || "expense");
-  const entered = Number(formData.get("amount") || 0);
-  if (!entered || entered <= 0) redirect(`/ledger/${id}?e=Enter+an+amount`);
-  const accountId = Number(formData.get("accountId"));
-  if (!Number.isInteger(accountId) || accountId <= 0) redirect(`/ledger/${id}?e=Pick+an+account`);
-  const counter = formData.get("counterAccountId");
+  const r = await readEntry(household.id, formData);
+  if (r.error !== undefined) redirect(`/ledger/${id}?e=` + encodeURIComponent(r.error));
+  const e = r.entry;
   // A loan repayment received is a transfer in with no "to" account, stored
   // negative (see loanTransferAmount). The form shows it positive.
-  const inbound = type === "transfer" && !counter && formData.get("inbound") === "1";
-  const amount = refund || inbound ? -entered : entered;
-  const categoryId = formData.get("categoryId") ? Number(formData.get("categoryId")) : null;
-  const personId = formData.get("personId") ? Number(formData.get("personId")) : null;
+  const inbound = e.type === "transfer" && !e.counterAccountId && formData.get("inbound") === "1";
+  const amount = e.refund || inbound ? -e.entered : e.entered;
 
   const [tx] = await db().update(t.transactions).set(({
-    type,
+    type: e.type,
     amount: amount.toFixed(2),
-    txDate: String(formData.get("txDate") || new Date().toISOString().slice(0, 10)),
-    description: String(formData.get("description") || "").trim(),
-    categoryId: type === "expense" ? categoryId : null,
-    personId,
-    accountId,
-    counterAccountId: type === "transfer" && counter ? Number(counter) : null,
-    isAbnormal: formData.get("isAbnormal") === "on",
-    isPassthrough: formData.get("isPassthrough") === "on",
-    needsReview: formData.get("needsReview") === "on"
+    txDate: e.txDate,
+    description: e.description,
+    categoryId: e.categoryId,
+    personId: e.personId,
+    accountId: e.accountId,
+    counterAccountId: e.counterAccountId,
+    isAbnormal: e.isAbnormal,
+    isPassthrough: e.isPassthrough,
+    needsReview: e.needsReview
   } as any))
     .where(and(eq(t.transactions.householdId, household.id), eq(t.transactions.id, id)))
     .returning();
@@ -176,6 +211,7 @@ export async function resolveReview(formData: FormData) {
   const personId = formData.get("personId") ? Number(formData.get("personId")) : null;
   const isPassthrough = formData.get("isPassthrough") === "on";
   const isAbnormal = formData.get("isAbnormal") === "on";
+  if (!(await ownsRefs(household.id, { categoryIds: [categoryId], personIds: [personId] }))) return;
 
   const [tx] = await db().update(t.transactions).set(({
     categoryId, personId, isPassthrough, isAbnormal, needsReview: false, reviewNote: null

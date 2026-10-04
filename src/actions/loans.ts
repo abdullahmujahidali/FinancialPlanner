@@ -7,8 +7,8 @@ import { requireContext } from "@/lib/session";
 import { todayStr } from "@/lib/money";
 import { recordLoanPayment, refreshLoanStatus, releaseLedgerRow } from "@/lib/loan-ledger";
 import type { Direction } from "@/lib/match";
-
-const DIRECTIONS = new Set(["owed_by_us", "owed_to_us"]);
+import { z } from "zod";
+import { f, readForm } from "@/lib/forms";
 
 /** Ids arrive as form strings; anything that isn't a real row id is a no-op. */
 function rowId(v: FormDataEntryValue | null) {
@@ -29,24 +29,29 @@ async function ownedLoan(householdId: number, loanId: number) {
   return loan ?? null;
 }
 
+const loanForm = z.object({
+  direction: z.enum(["owed_by_us", "owed_to_us"], { error: "Pick who owes whom" }),
+  counterparty: f.name("Who and how much are both required"),
+  principal: f.money,
+  startedOn: f.optDate,
+  dueOn: f.optDate,
+  note: f.text(300)
+});
+
 export async function addLoan(formData: FormData) {
   const { household, user } = await requireContext();
-  const counterparty = String(formData.get("counterparty") || "").trim();
-  const principal = Number(formData.get("principal") || 0);
-  const direction = String(formData.get("direction") || "");
-
-  if (!counterparty || !principal || !DIRECTIONS.has(direction)) {
-    redirect("/loans?e=Who+and+how+much+are+both+required");
-  }
+  const r = readForm(loanForm, formData);
+  if (!r.ok) redirect("/loans?e=" + encodeURIComponent(r.error));
+  const d = r.data;
 
   await db().insert(t.loans).values({
     householdId: household.id,
-    direction,
-    counterparty,
-    principal: principal.toFixed(2),
-    startedOn: String(formData.get("startedOn") || todayStr()),
-    dueOn: String(formData.get("dueOn") || "") || null,
-    note: String(formData.get("note") || "").trim() || null,
+    direction: d.direction,
+    counterparty: d.counterparty,
+    principal: d.principal.toFixed(2),
+    startedOn: d.startedOn ?? todayStr(),
+    dueOn: d.dueOn ?? null,
+    note: d.note || null,
     createdBy: user.id
   });
 
@@ -66,22 +71,32 @@ export async function addLoan(formData: FormData) {
  * When no account is chosen the payment is recorded on the loan alone, which
  * is how cash handed over in person gets logged.
  */
+const paymentForm = z.object({
+  loanId: f.id,
+  amount: f.money,
+  paidOn: f.optDate,
+  accountId: f.optId,
+  note: f.text(300),
+  back: f.text(10)
+});
+
 export async function addLoanPayment(formData: FormData) {
   const { household, user } = await requireContext();
-  const loanId = rowId(formData.get("loanId"));
-  const amount = Number(formData.get("amount") || 0);
-  const back = String(formData.get("back") || "") === "asset" ? "asset" : "loans";
-  if (!loanId || !amount || amount <= 0) redirect("/loans?e=Enter+an+amount");
+  const r = readForm(paymentForm, formData);
+  if (!r.ok) redirect("/loans?e=" + encodeURIComponent(r.error));
+  const d = r.data;
+  const back = d.back === "asset" ? "asset" : "loans";
 
-  const loan = await ownedLoan(household.id, loanId);
+  const loan = await ownedLoan(household.id, d.loanId);
   if (!loan) redirect("/loans?e=That+loan+was+not+found");
 
+  // The account is checked against this household inside recordLoanPayment.
   await recordLoanPayment({
     loan,
-    amount,
-    paidOn: String(formData.get("paidOn") || todayStr()),
-    accountId: rowId(formData.get("accountId")),
-    note: String(formData.get("note") || "").trim() || null,
+    amount: d.amount,
+    paidOn: d.paidOn ?? todayStr(),
+    accountId: d.accountId ?? null,
+    note: d.note || null,
     userId: user.id
   });
 
@@ -128,17 +143,17 @@ export async function updateLoan(formData: FormData) {
   const id = rowId(formData.get("id"));
   if (!id) return;
 
-  const counterparty = String(formData.get("counterparty") || "").trim();
-  const principal = Number(formData.get("principal") || 0);
-  if (!counterparty || !principal) return;
+  const r = readForm(loanForm.pick({ counterparty: true, principal: true, dueOn: true, note: true }), formData);
+  if (!r.ok) return;
+  const { counterparty, principal, dueOn, note } = r.data;
 
   await db()
     .update(t.loans)
     .set({
       counterparty,
       principal: principal.toFixed(2),
-      dueOn: String(formData.get("dueOn") || "") || null,
-      note: String(formData.get("note") || "").trim() || null
+      dueOn: dueOn ?? null,
+      note: note || null
     })
     .where(and(eq(t.loans.householdId, household.id), eq(t.loans.id, id)));
 
