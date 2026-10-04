@@ -10,6 +10,7 @@ import { classifyRows, type Rule } from "@/lib/rules";
 import { notify } from "@/actions/notifications";
 import { matchImportedRows } from "@/lib/loan-ledger";
 import { ownsRefs } from "@/lib/forms";
+import { checkBudgetAlerts } from "@/lib/budget-alerts";
 
 /**
  * Step 1 of the import flow: look at an uploaded CSV and report where its
@@ -108,6 +109,7 @@ export async function importStatement(formData: FormData) {
   // Rows that are really loan payments already recorded on /loans become
   // those payments' transfers instead of counting as spending or income.
   const loanMatched = await matchImportedRows(household.id, accountId, inserted);
+  await checkBudgetAlerts(household.id, inserted.map((r) => r.txDate));
 
   // balance tie-out: opening + credits - debits should equal closing
   let balanceOk: boolean | null = null;

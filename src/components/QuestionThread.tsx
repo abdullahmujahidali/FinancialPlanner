@@ -1,4 +1,5 @@
 import { MessageCircleQuestion, CornerDownRight } from "lucide-react";
+import SubmitButton from "@/components/SubmitButton";
 
 /**
  * The question-and-answer exchange on a flagged transaction.
@@ -42,7 +43,7 @@ export default function QuestionThread({
             placeholder="e.g. What was this payment for?"
             className="field min-w-0 flex-1 py-2 text-[14px]"
           />
-          <button className="btn btn-sm shrink-0">Ask</button>
+          <SubmitButton className="btn btn-sm shrink-0">Ask</SubmitButton>
         </form>
       </details>
     );
@@ -80,7 +81,7 @@ export default function QuestionThread({
             placeholder="Answer this…"
             className="field min-w-0 flex-1 py-2 text-[14px]"
           />
-          <button className="btn btn-sm shrink-0">Reply</button>
+          <SubmitButton className="btn btn-sm shrink-0">Reply</SubmitButton>
         </form>
       )}
     </div>

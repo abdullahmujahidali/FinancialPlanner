@@ -6,6 +6,7 @@ import { db, t } from "@/db/client";
 import { and, asc, eq, gte, lt, sql } from "drizzle-orm";
 import { saveCategoryBudgets } from "@/actions/admin";
 import { pkr, monthKey, monthLabel, monthRange } from "@/lib/money";
+import AmountInput from "@/components/AmountInput";
 
 export const dynamic = "force-dynamic";
 
@@ -71,10 +72,10 @@ export default async function BudgetSettings({ searchParams }: { searchParams: P
                     {c.passthroughDefault && " · pass-through"}
                   </span>
                 </span>
-                <input name={`b_${c.id}`} type="number" inputMode="numeric" min="0" step="1"
+                <AmountInput name={`b_${c.id}`} type="number" inputMode="numeric" min="0" step="1"
                   defaultValue={c.monthlyBudget != null ? Number(c.monthlyBudget) : ""}
                   placeholder="—" aria-label={`Monthly budget for ${c.name}`}
-                  className="field num w-32 shrink-0 text-right" />
+                  inputClassName="field num w-32 text-right" hintPosition="none" className="shrink-0" />
               </li>
             ))}
           </ul>

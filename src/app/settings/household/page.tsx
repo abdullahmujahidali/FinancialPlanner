@@ -2,6 +2,8 @@ import SettingsPage from "@/components/SettingsPage";
 import { requireContext } from "@/lib/session";
 import { updateHousehold } from "@/actions/admin";
 import { CURRENCY_CODES } from "@/lib/money";
+import SubmitButton from "@/components/SubmitButton";
+import AmountInput from "@/components/AmountInput";
 
 export const dynamic = "force-dynamic";
 
@@ -37,14 +39,14 @@ export default async function HouseholdSettings() {
 
           <label className="block">
             <span className="eyebrow text-muted">Monthly budget</span>
-            <input
+            <AmountInput
               name="monthlyBudget"
               type="number"
               inputMode="numeric"
               step="1"
               min="0"
               defaultValue={Number(household.monthlyBudget)}
-              className="field num mt-2"
+              inputClassName="field num" className="mt-2"
             />
             <span className="mt-2 block text-[13px] text-muted">
               The target spend for one month. Whatever is left over at month end counts as savings.{" "}
@@ -113,7 +115,7 @@ export default async function HouseholdSettings() {
         </div>
 
         <div className="mt-7">
-          <button className="btn w-full">Save changes</button>
+          <SubmitButton className="btn w-full">Save changes</SubmitButton>
         </div>
       </form>
     </SettingsPage>

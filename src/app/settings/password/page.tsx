@@ -2,6 +2,7 @@ import SettingsPage from "@/components/SettingsPage";
 import SubmitButton from "@/components/SubmitButton";
 import { requireContext } from "@/lib/session";
 import { changePassword } from "@/actions/auth";
+import ErrorToast from "@/components/ErrorToast";
 
 export const dynamic = "force-dynamic";
 
@@ -21,9 +22,7 @@ export default async function PasswordSettings({
       {sp.ok && (
         <p className="mb-4 rounded-[18px] bg-acid px-5 py-4 text-[14px] font-bold">Password changed.</p>
       )}
-      {sp.e && (
-        <p className="mb-4 rounded-[18px] bg-blush px-5 py-4 text-[14px] font-bold">{sp.e}</p>
-      )}
+      <ErrorToast message={sp.e} />
       <form action={changePassword} className="rounded-[22px] bg-card p-6 lg:p-8">
         <div className="flex flex-col gap-5">
           {[

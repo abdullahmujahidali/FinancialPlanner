@@ -7,6 +7,7 @@ import { requireContext } from "@/lib/session";
 import { notify } from "@/actions/notifications";
 import { z } from "zod";
 import { f, ownsRefs, readForm } from "@/lib/forms";
+import { checkBudgetAlerts } from "@/lib/budget-alerts";
 import { todayStr } from "@/lib/money";
 
 const MAX_ATTACHMENT = 2 * 1024 * 1024;
@@ -90,6 +91,7 @@ export async function addTransaction(formData: FormData) {
   }).returning();
 
   await saveAttachment(household.id, formData.get("receipt") as File | null, { transactionId: tx.id });
+  await checkBudgetAlerts(household.id, [tx.txDate]);
   revalidatePath("/"); revalidatePath("/ledger"); revalidatePath("/entry");
   // Confirm with the actual figure, not a bare "Saved." — and land on the
   // ledger where the new row is visible, so the entry is self-evidently there.
@@ -137,6 +139,7 @@ export async function updateTransaction(formData: FormData) {
     .returning();
 
   if (!tx) redirect("/ledger");
+  await checkBudgetAlerts(household.id, [tx.txDate]);
 
   // Payee name: set, change or clear the household's name for this bank text.
   if (formData.has("payee") && tx.description) {

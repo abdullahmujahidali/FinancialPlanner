@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { pkr } from "@/lib/money";
 import { Wallet, ChevronDown } from "lucide-react";
+import SubmitButton from "@/components/SubmitButton";
+import AmountInput from "@/components/AmountInput";
 
 /**
  * Sets the one figure a ledger cannot derive: what an account held before the
@@ -81,14 +83,14 @@ export default function OpeningBalance({
             <input type="hidden" name="id" value={id} />
             <label className="min-w-0 flex-1">
               <span className="eyebrow mb-1 block text-muted">Opening balance</span>
-              <input
+              <AmountInput
                 name="openingBalance"
                 type="number"
                 inputMode="decimal"
                 step="0.01"
                 defaultValue={opening ?? ""}
                 placeholder="e.g. 250000"
-                className="field"
+                inputClassName="field"
                 aria-label={`Opening balance for ${name}`}
               />
             </label>
@@ -102,7 +104,7 @@ export default function OpeningBalance({
                 aria-label={`Opening date for ${name}`}
               />
             </label>
-            <button className="btn btn-sm shrink-0">Save</button>
+            <SubmitButton className="btn btn-sm shrink-0">Save</SubmitButton>
           </form>
 
           <p className="mt-3 text-[11.5px] font-medium leading-relaxed text-muted">

@@ -1,6 +1,7 @@
 import { login, signup } from "@/actions/auth";
 import { currentUserId } from "@/lib/session";
 import { redirect } from "next/navigation";
+import SubmitButton from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -74,9 +75,9 @@ export default async function LoginPage({
                 className="field"
               />
             )}
-            <button className="btn w-full">
+            <SubmitButton className="btn w-full" savedLabel="">
               {signupMode ? "Create household" : "Sign in"}
-            </button>
+            </SubmitButton>
           </form>
         </div>
 

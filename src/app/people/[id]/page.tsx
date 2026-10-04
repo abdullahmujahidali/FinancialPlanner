@@ -6,7 +6,7 @@ import EmptyState from "@/components/EmptyState";
 import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
-import { pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
+import { fmtDate, pkr, monthKey, monthRange, monthLabel, monthLabelShort } from "@/lib/money";
 import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -138,7 +138,7 @@ export default async function PersonPage({
                       {tx.description || category || tx.type}
                     </div>
                     <div className="mt-1 text-[12px] font-semibold text-muted">
-                      <span className="num">{tx.txDate}</span>
+                      <span className="num">{fmtDate(tx.txDate)}</span>
                       {account ? ` · ${account}` : ""}
                       {category ? ` · ${category}` : ""}
                     </div>

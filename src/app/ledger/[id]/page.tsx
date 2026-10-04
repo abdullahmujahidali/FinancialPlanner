@@ -11,6 +11,8 @@ import FlagToggles from "@/components/FlagToggles";
 import { prettyDescription } from "@/lib/describe";
 import SubmitButton from "@/components/SubmitButton";
 import ConfirmDelete from "@/components/ConfirmDelete";
+import ErrorToast from "@/components/ErrorToast";
+import AmountInput from "@/components/AmountInput";
 
 export const dynamic = "force-dynamic";
 
@@ -72,9 +74,7 @@ export default async function EditEntryPage({
         </div>
       }
     >
-      {sp.e && (
-        <p className="mb-5 rounded-[18px] bg-blush px-6 py-4 text-[14px] font-bold">{sp.e}</p>
-      )}
+      <ErrorToast message={sp.e} />
 
       <form action={updateTransaction} className="space-y-5">
         <input type="hidden" name="id" value={tx.id} />
@@ -98,7 +98,7 @@ export default async function EditEntryPage({
           <label htmlFor="amount" className="eyebrow">Amount (PKR)</label>
           {/* Money in from a loan is a negative transfer; keep it pointing in. */}
           {tx.type === "transfer" && Number(tx.amount) < 0 && <input type="hidden" name="inbound" value="1" />}
-          <input
+          <AmountInput hintPosition="below"
             id="amount"
             name="amount"
             type="number"
@@ -108,7 +108,7 @@ export default async function EditEntryPage({
             placeholder="0"
             required
             defaultValue={Math.abs(Number(tx.amount))}
-            className="money-xl mt-3 w-full border-0 bg-transparent p-0 text-[56px] outline-none placeholder:text-ink/25 lg:text-[72px]"
+            inputClassName="money-xl w-full border-0 bg-transparent p-0 text-[56px] outline-none placeholder:text-ink/25 lg:text-[72px]" className="mt-3"
           />
         </div>
 

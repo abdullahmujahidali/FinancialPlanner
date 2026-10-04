@@ -67,10 +67,10 @@ export default async function CategoriesSettings() {
       <form action={addCategory} className="mb-4 rounded-[22px] bg-card p-5 lg:p-6">
         <div className="flex items-center gap-3">
           <input name="name" placeholder="e.g. Groceries" className="field min-w-0 flex-1" required />
-          <button className="btn shrink-0 gap-1.5 px-4">
+          <SubmitButton className="btn shrink-0 gap-1.5 px-4">
             <Plus size={17} strokeWidth={2.75} />
             <span className="hidden sm:inline">Add</span>
-          </button>
+          </SubmitButton>
         </div>
         <label className="mt-3 flex items-center gap-2.5 text-[13px] font-bold">
           <input type="checkbox" name="passthroughDefault" className="h-4 w-4 rounded accent-ink" />

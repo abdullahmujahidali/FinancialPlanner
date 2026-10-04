@@ -15,6 +15,7 @@ import { getBalances } from "@/lib/balances";
 import { getGoalForecasts, etaLabel } from "@/lib/forecast";
 import { getLoanNet } from "@/lib/loans";
 import { ChevronLeft, ChevronRight, ArrowRight, Plus, Upload } from "lucide-react";
+import { spendRatio, tierFor } from "@/lib/tiers";
 
 export const dynamic = "force-dynamic";
 
@@ -217,6 +218,14 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const reviewCount = Number(reviewRow.v);
   const pct = budget > 0 ? Math.min(100, Math.round((counted / budget) * 100)) : 0;
   const over = budget > 0 && counted > budget;
+  // The incentive may leave one-offs out, but the household still spent them.
+  // When everything together breaks the budget the card has to say so — a
+  // green "Within budget" beside four times the budget is not true.
+  const totalOver = budget > 0 && spend > budget;
+  const totalPct = budget > 0 ? Math.round((spend / budget) * 100) : 0;
+  const hiddenOver = exclude && oneOffs > 0 && totalOver && !over;
+  // Bar: day-to-day in lime, one-offs hatched after it, capped at the track.
+  const oneOffPct = budget > 0 && exclude ? Math.max(0, Math.min(100 - pct, (oneOffs / budget) * 100)) : 0;
 
   const staleDays = household.lastRevaluedAt
     ? Math.floor((Date.now() - new Date(household.lastRevaluedAt).getTime()) / 86400000)
@@ -240,11 +249,15 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const setupOpen = setup.filter((i) => !i.done);
   const pacePct = dayNow > 0 ? Math.min(100, (dayNow / daysInMonth) * 100) : 0;
   const safeLeft = Math.max(0, budget - counted - committed);
+  // Where the month stands, on total spend (see src/lib/tiers.ts).
+  const tier = tierFor(spendRatio(spend, budget, running, pacePct / 100));
   const status: { label: string; tone: string } =
     budget <= 0 ? { label: "No budget set", tone: "bg-page text-muted" }
-    : over ? { label: "Over budget", tone: "bg-blush text-ink" }
-    : running && pct > pacePct + 5 ? { label: "Ahead of pace", tone: "bg-blush/60 text-ink" }
-    : { label: running ? "On track" : "Within budget", tone: "bg-acid text-ink" };
+    : { label: `${tier.label}${running ? " for the date" : ""} · ${totalPct}%`, tone: `${tier.bg} ${tier.text}` };
+  // The incentive's own measure, when it differs from the total.
+  const dayToDay = budget > 0 && exclude && oneOffs > 0
+    ? over ? "Day-to-day over too" : "Day-to-day in budget"
+    : null;
 
   const card = "rounded-[20px] bg-card p-5 lg:p-6";
   const head = "mb-4 flex items-center justify-between gap-3";
@@ -296,28 +309,43 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <section className={card + " lg:col-span-8"}>
           <div className={head}>
             <h2 className={h2}>{monthLabel(m)}{running && dayNow > 0 ? ` · day ${dayNow} of ${daysInMonth}` : ""}</h2>
-            <span className={"rounded-full px-3 py-1 text-[12px] font-bold " + status.tone}>{status.label}</span>
+            <div className="flex flex-wrap justify-end gap-1.5">
+              {dayToDay && (
+                <span className="rounded-full bg-page px-3 py-1 text-[12px] font-bold text-muted">{dayToDay}</span>
+              )}
+              <span className={"rounded-full px-3 py-1 text-[12px] font-bold " + status.tone}>{status.label}</span>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="money text-[40px] font-extrabold leading-none tracking-[-0.04em] lg:text-[52px]">{pkr(spend)}</span>
             <span className="text-[15px] font-semibold text-muted">
-              spent{exclude && oneOffs > 0 ? ` · ${pkr(counted, { compact: true })} counts against` : " of"} {pkr(budget, { compact: true })}
+              spent{exclude && oneOffs > 0 ? ` · ${pkr(counted, { compact: true })} day-to-day against` : " of"} {pkr(budget, { compact: true })}
+              {hiddenOver && <span className="text-over"> · {totalPct}% of the budget in total</span>}
             </span>
           </div>
 
           {/* The bar shows spend; the tick shows where spend "should" be by today. */}
           <div className="relative mt-5 h-3 rounded-full bg-page">
-            <div className={"h-full rounded-full " + (over ? "bg-blush" : "bg-acid")} style={{ width: `${pct}%` }} />
+            <div className="flex h-full overflow-hidden rounded-full">
+              <div className={"h-full " + tier.bg} style={{ width: `${pct}%` }} />
+              {/* One-offs: the same colour, striped, so the bar shows the whole month. */}
+              {oneOffPct > 0 && (
+                <div className={"relative h-full " + tier.bg} style={{ width: `${oneOffPct}%` }}
+                  title="One-offs, not counted against the budget">
+                  <div className="hatch absolute inset-0 opacity-30" />
+                </div>
+              )}
+            </div>
             {running && dayNow > 0 && (
               <span className="absolute -top-1 h-5 w-[3px] rounded-full bg-ink" style={{ left: `calc(${pacePct}% - 1.5px)` }}
                 title="Where spending would be at an even pace" />
             )}
           </div>
           <div className="mt-2 flex justify-between text-[12px] font-bold text-muted">
-            <span>{pct}% used{running && dayNow > 0 ? ` · ${Math.round(pacePct)}% of the month gone` : ""}</span>
+            <span>{pct}% used{exclude && oneOffs > 0 ? " day-to-day" : ""}{running && dayNow > 0 ? ` · ${Math.round(pacePct)}% of the month gone` : ""}</span>
             <span className={over ? "text-over" : ""}>
-              {over ? `${pkr(counted - budget, { compact: true })} over` : `${pkr(budget - counted, { compact: true })} left`}
+              {over ? `${pkr(counted - budget, { compact: true })} over` : `${pkr(budget - counted, { compact: true })} left${hiddenOver ? " day-to-day" : ""}`}
             </span>
           </div>
 
@@ -337,7 +365,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             ].map(([label, value, tone, hint], i) => (
               <div key={i} className={"px-0 sm:px-4 " + (i % 4 !== 0 ? "sm:border-l sm:border-line" : "sm:pl-0")}>
                 <dt className="text-[11.5px] font-bold uppercase tracking-[0.06em] text-muted">{label}</dt>
-                <dd className={"money mt-1 text-[20px] font-extrabold " + tone}>{value}</dd>
+                <dd className={"money mt-1 whitespace-nowrap text-[clamp(16px,4.5vw,20px)] font-extrabold lg:text-[clamp(15px,1.5vw,20px)] " + tone}>{value}</dd>
                 <dd className="text-[11.5px] font-semibold text-muted">{hint}</dd>
               </div>
             ))}

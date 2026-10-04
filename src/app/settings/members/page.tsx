@@ -4,6 +4,8 @@ import { db, t } from "@/db/client";
 import { eq } from "drizzle-orm";
 import { addMember } from "@/actions/admin";
 import { Plus } from "lucide-react";
+import SubmitButton from "@/components/SubmitButton";
+import ErrorToast from "@/components/ErrorToast";
 
 export const dynamic = "force-dynamic";
 
@@ -33,9 +35,7 @@ export default async function MembersSettings({
       title="Members"
       description="Members are the people who can sign in to this household and see its books. This is not the same as People: a person there is only a tag you put on an expense, while a member here has an email and a password of their own."
     >
-      {sp.e && (
-        <p className="mb-5 rounded-[14px] bg-blush px-4 py-3 text-sm font-bold">{sp.e}</p>
-      )}
+      <ErrorToast message={sp.e} />
       <div className="overflow-hidden rounded-[22px] bg-card">
         {members.length === 0 ? (
           <div className="px-5 py-10 text-center lg:px-6">
@@ -85,9 +85,9 @@ export default async function MembersSettings({
                 placeholder="Starter password (if new)"
                 className="field min-w-0 flex-1"
               />
-              <button className="btn shrink-0 px-4" aria-label="Add member">
+              <SubmitButton className="btn shrink-0 px-4" aria-label="Add member" savedLabel="">
                 <Plus size={17} strokeWidth={2.75} />
-              </button>
+              </SubmitButton>
             </div>
             <p className="mt-3 text-[13px] text-muted">
               An existing Trusses account joins straight away. A new email needs a starter

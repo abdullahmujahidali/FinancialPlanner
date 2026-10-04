@@ -6,6 +6,9 @@ import { addTransaction, quickAddCategory, quickAddPerson } from "@/actions/ledg
 import { todayStr } from "@/lib/money";
 import SearchableSelect from "@/components/SearchableSelect";
 import FlagToggles from "@/components/FlagToggles";
+import SubmitButton from "@/components/SubmitButton";
+import ErrorToast from "@/components/ErrorToast";
+import AmountInput from "@/components/AmountInput";
 
 export const dynamic = "force-dynamic";
 
@@ -26,9 +29,7 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
       {sp.ok && (
         <p className="mb-5 rounded-[18px] bg-acid px-6 py-4 text-[14px] font-bold">Saved.</p>
       )}
-      {sp.e && (
-        <p className="mb-5 rounded-[18px] bg-blush px-6 py-4 text-[14px] font-bold">{sp.e}</p>
-      )}
+      <ErrorToast message={sp.e} />
 
       <form action={addTransaction} className="group/f space-y-5">
         {/* type switch — rounded segmented pills */}
@@ -46,7 +47,7 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
         {/* the amount — the one thing this screen is for */}
         <div className="zone-acid">
           <label htmlFor="amount" className="eyebrow">Amount (PKR)</label>
-          <input
+          <AmountInput hintPosition="below"
             id="amount"
             name="amount"
             type="number"
@@ -56,7 +57,7 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
             placeholder="0"
             required
             autoFocus
-            className="money-xl mt-3 w-full border-0 bg-transparent p-0 text-[56px] outline-none placeholder:text-ink/25 lg:text-[72px]"
+            inputClassName="money-xl w-full border-0 bg-transparent p-0 text-[56px] outline-none placeholder:text-ink/25 lg:text-[72px]" className="mt-3"
           />
         </div>
 
@@ -123,7 +124,7 @@ export default async function EntryPage({ searchParams }: { searchParams: Promis
           <input name="receipt" type="file" accept="image/*,.pdf" className="field mt-3 file:mr-3 file:rounded-full file:border-0 file:bg-ink file:px-4 file:py-1.5 file:text-[13px] file:font-bold file:text-acid" />
         </label>
 
-        <button className="btn w-full py-4 text-[16px]">Save entry</button>
+        <SubmitButton className="btn w-full py-4 text-[16px]">Save entry</SubmitButton>
       </form>
     </Shell>
   );

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Bell, Upload, Inbox, Wallet, Target, Building2, Check, X, ArrowRight } from "lucide-react";
+import { alertTone } from "@/lib/tiers";
 
 export type Note = {
   id: number;
@@ -111,7 +112,7 @@ export default function NotificationBell({
                       <span
                         className={
                           "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full " +
-                          (n.readAt ? "bg-page text-muted" : "bg-acid text-ink")
+                          (n.readAt ? "bg-page text-muted" : alertTone(n.href) ?? "bg-acid text-ink")
                         }
                       >
                         <Icon size={16} strokeWidth={2.2} />

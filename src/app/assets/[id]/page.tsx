@@ -14,8 +14,10 @@ import {
   deleteAsset,
   deleteAssetValue
 } from "@/actions/portfolio";
-import { pkr, todayStr } from "@/lib/money";
+import { fmtDate, pkr, todayStr } from "@/lib/money";
 import { ChevronLeft, Trash2 } from "lucide-react";
+import SubmitButton from "@/components/SubmitButton";
+import AmountInput from "@/components/AmountInput";
 
 export const dynamic = "force-dynamic";
 
@@ -119,8 +121,6 @@ export default async function AssetDetailPage({
           </h1>
         </div>
       }
-      action={<ConfirmDelete id={asset.id} label={asset.name} action={deleteAsset} noun="asset"
-        consequence="Its value history and any photos go with it — selling keeps all of that." />}
     >
       {/* ── Current value ────────────────────────────────────────────────── */}
       <section className="zone-ink mb-5">
@@ -132,7 +132,7 @@ export default async function AssetDetailPage({
             {history.length} valuation{history.length === 1 ? "" : "s"}
           </span>
         </div>
-        <div className="money-xl mt-4 text-[48px] text-acid lg:text-[68px]">{pkr(current)}</div>
+        <div className="money-xl mt-4 whitespace-nowrap text-[clamp(30px,10vw,48px)] text-acid lg:text-[68px]">{pkr(current)}</div>
         <div className={"num mt-3 text-[15px] font-bold " + (up ? "text-good" : "text-over")}>
           {up ? "+" : "−"}{pkr(Math.abs(delta))}
           <span className="ml-2 font-medium text-white/55">
@@ -141,16 +141,123 @@ export default async function AssetDetailPage({
         </div>
       </section>
 
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
-        <div className="flex flex-col gap-5 lg:w-[57%] lg:shrink-0">
+      {/* Phone order follows what gets done most: pay or revalue, then the
+          record, then the rarely-used edit and delete. Desktop keeps two
+          columns via explicit grid placement. */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[57%_minmax(0,1fr)] lg:items-start">
+        <div className="flex min-w-0 flex-col gap-5 lg:col-start-2 lg:row-start-1">
+          {/* ── Installments ───────────────────────────────────────────── */}
+          {plans.map((plan) => {
+            const paid = planPayments.filter((p) => p.loanId === plan.id)
+              .reduce((s, p) => s + Number(p.amount), 0);
+            const principal = Number(plan.principal);
+            const { outstanding } = loanBalance(principal, paid);
+            const pct = principal ? Math.min(100, Math.round((paid / principal) * 100)) : 0;
+            return (
+              <section key={plan.id} className="zone-card">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h2 className="eyebrow text-muted">Installments · {plan.counterparty}</h2>
+                  <Link href="/loans" className="text-[12px] font-bold text-muted underline underline-offset-2">Loans</Link>
+                </div>
+                <div className="money-xl mt-4 text-[34px]">{pkr(outstanding)}</div>
+                <p className="num mt-1 text-[13px] font-semibold text-muted">
+                  {outstanding > 0 ? "left to pay" : "paid in full"} · {pkr(paid)} of {pkr(principal)} paid
+                </p>
+                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-page">
+                  <div className="h-full rounded-full bg-ink" style={{ width: `${pct}%` }} />
+                </div>
+                {planPayments.some((p) => p.loanId === plan.id) && (
+                  <ul className="mt-4 border-t border-line pt-2">
+                    {planPayments.filter((p) => p.loanId === plan.id).map((p) => (
+                      <li key={p.id} className="flex items-baseline justify-between gap-3 py-1.5 text-[13px]">
+                        <span className="min-w-0 truncate text-muted">
+                          <span className="num font-semibold text-ink">{fmtDate(p.paidOn)}</span>
+                          {p.note ? ` · ${p.note}` : ""}
+                        </span>
+                        <span className="num shrink-0 font-bold">{pkr(Number(p.amount))}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {outstanding > 0 && (
+                  <form action={addLoanPayment} className="mt-5 space-y-3">
+                    <input type="hidden" name="loanId" value={plan.id} />
+                    <input type="hidden" name="back" value="asset" />
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <AmountInput name="amount" type="number" inputMode="numeric" step="0.01" required
+                        placeholder="Installment paid" inputClassName="field num" />
+                      <input name="paidOn" type="date" defaultValue={todayStr()} className="field" />
+                    </div>
+                    <select name="accountId" className="field" defaultValue="">
+                      <option value="">Paid in cash — no bank account</option>
+                      {accounts.map((a) => <option key={a.id} value={a.id}>Paid from {a.name}</option>)}
+                    </select>
+                    <SubmitButton className="btn w-full">Record installment</SubmitButton>
+                  </form>
+                )}
+              </section>
+            );
+          })}
+
+          {plans.length === 0 && asset.status === "active" && (
+            <details className="zone-card">
+              <summary className="cursor-pointer list-none">
+                <span className="eyebrow text-muted">Still paying for this?</span>
+                <span className="mt-1 block text-[13px] font-semibold text-muted">
+                  Token paid, the rest in installments — track what is left.
+                </span>
+              </summary>
+              <form action={addInstallments} className="mt-5 space-y-3">
+                <input type="hidden" name="assetId" value={asset.id} />
+                <input name="seller" placeholder="Paying whom? e.g. the dealer or seller" className="field" required />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <AmountInput name="paidSoFar" type="number" inputMode="numeric" step="0.01"
+                    placeholder="Paid so far, e.g. token" inputClassName="field num" />
+                  <input name="paidOn" type="date" defaultValue={todayStr()} className="field" />
+                </div>
+                <select name="paidFrom" className="field" defaultValue="">
+                  <option value="">Paid in cash — no bank account</option>
+                  {accounts.map((a) => <option key={a.id} value={a.id}>Paid from {a.name}</option>)}
+                </select>
+                <p className="text-[12px] font-semibold leading-snug text-muted">
+                  {pkr(purchasePrice)} minus what you have paid is recorded as owed. If the payment
+                  is already in the ledger as an expense, it is turned into a transfer — not counted twice.
+                </p>
+                <SubmitButton className="btn w-full">Start tracking installments</SubmitButton>
+              </form>
+            </details>
+          )}
+
+          {/* ── Revalue ────────────────────────────────────────────────── */}
+          <section className="zone-acid">
+            <h2 className="eyebrow">Record a new value</h2>
+            <form action={revalueAsset} className="mt-6 space-y-4">
+              <input type="hidden" name="assetId" value={asset.id} />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <AmountInput
+                  name="value"
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="New value"
+                  inputClassName="field num"
+                  required
+                />
+                <input name="valuedOn" type="date" defaultValue={todayStr()} className="field" />
+              </div>
+              <SubmitButton className="btn w-full">Save valuation</SubmitButton>
+            </form>
+          </section>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-1 lg:row-span-2">
           {/* ── Facts ──────────────────────────────────────────────────── */}
           <section className="overflow-hidden rounded-[22px] bg-card">
             <h2 className="eyebrow px-6 pb-2 pt-6 text-muted lg:px-8">Facts</h2>
             <dl className="px-6 pb-4 lg:px-8">
-              <Fact label="Purchase date" value={asset.purchaseDate} />
+              <Fact label="Purchase date" value={fmtDate(asset.purchaseDate)} />
               <Fact label="Purchase price" value={pkr(purchasePrice)} />
               <Fact label="Status" value={asset.status === "sold" ? "Sold" : "Active"} />
-              {asset.soldDate && <Fact label="Sold date" value={asset.soldDate} />}
+              {asset.soldDate && <Fact label="Sold date" value={fmtDate(asset.soldDate)} />}
               {asset.soldPrice && <Fact label="Sold price" value={pkr(Number(asset.soldPrice))} />}
               {asset.notes && <Fact label="Notes" value={asset.notes} last />}
             </dl>
@@ -181,7 +288,7 @@ export default async function AssetDetailPage({
                     <div className="min-w-0">
                       <div className="num text-[15px] font-bold">{pkr(r.value)}</div>
                       <div className="num mt-1 text-[13px] font-medium text-muted">
-                        {r.on}
+                        {fmtDate(r.on)}
                         {r.valueId === null && " · purchase"}
                       </div>
                     </div>
@@ -199,7 +306,7 @@ export default async function AssetDetailPage({
                         <form action={deleteAssetValue}>
                           <input type="hidden" name="id" value={r.valueId} />
                           <button
-                            aria-label={`Delete valuation from ${r.on}`}
+                            aria-label={`Delete valuation from ${fmtDate(r.on)}`}
                             className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition hover:bg-blush hover:text-ink"
                           >
                             <Trash2 size={15} strokeWidth={2.2} />
@@ -214,138 +321,49 @@ export default async function AssetDetailPage({
           </section>
         </div>
 
-        <div className="flex flex-col gap-5 lg:min-w-0 lg:flex-1">
-          {/* ── Installments ───────────────────────────────────────────── */}
-          {plans.map((plan) => {
-            const paid = planPayments.filter((p) => p.loanId === plan.id)
-              .reduce((s, p) => s + Number(p.amount), 0);
-            const principal = Number(plan.principal);
-            const { outstanding } = loanBalance(principal, paid);
-            const pct = principal ? Math.min(100, Math.round((paid / principal) * 100)) : 0;
-            return (
-              <section key={plan.id} className="zone-card">
-                <div className="flex items-baseline justify-between gap-3">
-                  <h2 className="eyebrow text-muted">Installments · {plan.counterparty}</h2>
-                  <Link href="/loans" className="text-[12px] font-bold text-muted underline underline-offset-2">Loans</Link>
-                </div>
-                <div className="money-xl mt-4 text-[34px]">{pkr(outstanding)}</div>
-                <p className="num mt-1 text-[13px] font-semibold text-muted">
-                  {outstanding > 0 ? "left to pay" : "paid in full"} · {pkr(paid)} of {pkr(principal)} paid
-                </p>
-                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-page">
-                  <div className="h-full rounded-full bg-ink" style={{ width: `${pct}%` }} />
-                </div>
-                {planPayments.some((p) => p.loanId === plan.id) && (
-                  <ul className="mt-4 border-t border-line pt-2">
-                    {planPayments.filter((p) => p.loanId === plan.id).map((p) => (
-                      <li key={p.id} className="flex items-baseline justify-between gap-3 py-1.5 text-[13px]">
-                        <span className="min-w-0 truncate text-muted">
-                          <span className="num font-semibold text-ink">{p.paidOn}</span>
-                          {p.note ? ` · ${p.note}` : ""}
-                        </span>
-                        <span className="num shrink-0 font-bold">{pkr(Number(p.amount))}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {outstanding > 0 && (
-                  <form action={addLoanPayment} className="mt-5 space-y-3">
-                    <input type="hidden" name="loanId" value={plan.id} />
-                    <input type="hidden" name="back" value="asset" />
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <input name="amount" type="number" inputMode="numeric" step="0.01" required
-                        placeholder="Installment paid" className="field num" />
-                      <input name="paidOn" type="date" defaultValue={todayStr()} className="field" />
-                    </div>
-                    <select name="accountId" className="field" defaultValue="">
-                      <option value="">Paid in cash — no bank account</option>
-                      {accounts.map((a) => <option key={a.id} value={a.id}>Paid from {a.name}</option>)}
-                    </select>
-                    <button className="btn w-full">Record installment</button>
-                  </form>
-                )}
-              </section>
-            );
-          })}
-
-          {plans.length === 0 && asset.status === "active" && (
-            <details className="zone-card">
-              <summary className="cursor-pointer list-none">
-                <span className="eyebrow text-muted">Still paying for this?</span>
-                <span className="mt-1 block text-[13px] font-semibold text-muted">
-                  Token paid, the rest in installments — track what is left.
-                </span>
-              </summary>
-              <form action={addInstallments} className="mt-5 space-y-3">
-                <input type="hidden" name="assetId" value={asset.id} />
-                <input name="seller" placeholder="Paying whom? e.g. the dealer or seller" className="field" required />
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <input name="paidSoFar" type="number" inputMode="numeric" step="0.01"
-                    placeholder="Paid so far, e.g. token" className="field num" />
-                  <input name="paidOn" type="date" defaultValue={todayStr()} className="field" />
-                </div>
-                <select name="paidFrom" className="field" defaultValue="">
-                  <option value="">Paid in cash — no bank account</option>
-                  {accounts.map((a) => <option key={a.id} value={a.id}>Paid from {a.name}</option>)}
-                </select>
-                <p className="text-[12px] font-semibold leading-snug text-muted">
-                  {pkr(purchasePrice)} minus what you have paid is recorded as owed. If the payment
-                  is already in the ledger as an expense, it is turned into a transfer — not counted twice.
-                </p>
-                <button className="btn w-full">Start tracking installments</button>
-              </form>
-            </details>
-          )}
-
-          {/* ── Revalue ────────────────────────────────────────────────── */}
-          <section className="zone-acid">
-            <h2 className="eyebrow">Record a new value</h2>
-            <form action={revalueAsset} className="mt-6 space-y-4">
-              <input type="hidden" name="assetId" value={asset.id} />
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <input
-                  name="value"
-                  type="number"
-                  inputMode="numeric"
-                  placeholder="New value"
-                  className="field num"
-                  required
-                />
-                <input name="valuedOn" type="date" defaultValue={todayStr()} className="field" />
-              </div>
-              <button className="btn w-full">Save valuation</button>
-            </form>
-          </section>
-
+        <div className="flex min-w-0 flex-col gap-5 lg:col-start-2 lg:row-start-2">
           {/* ── Edit ───────────────────────────────────────────────────── */}
           <section id="edit" className="zone-card scroll-mt-6">
             <h2 className="eyebrow text-muted">Edit name, price or date</h2>
             <form action={updateAsset} className="mt-6 space-y-4">
               <input type="hidden" name="id" value={asset.id} />
-              <input name="name" defaultValue={asset.name} className="field" required />
+              {/* Labelled: a bare "7000000" in a box says nothing about what it is. */}
+              <label className="block">
+                <span className="eyebrow text-[10px] text-muted">Name</span>
+                <input name="name" defaultValue={asset.name} className="field mt-1.5" required />
+              </label>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <input
-                  name="purchasePrice"
-                  type="number"
-                  inputMode="numeric"
-                  defaultValue={purchasePrice}
-                  className="field num"
-                  required
-                />
-                <input
-                  name="purchaseDate"
-                  type="date"
-                  defaultValue={asset.purchaseDate}
-                  className="field"
-                />
+                <label className="block">
+                  <span className="eyebrow text-[10px] text-muted">Purchase price</span>
+                  <AmountInput
+                    name="purchasePrice"
+                    type="number"
+                    inputMode="numeric"
+                    defaultValue={purchasePrice}
+                    className="mt-1.5"
+                    required
+                  />
+                </label>
+                <label className="block">
+                  <span className="eyebrow text-[10px] text-muted">Purchase date</span>
+                  <input
+                    name="purchaseDate"
+                    type="date"
+                    defaultValue={asset.purchaseDate}
+                    className="field mt-1.5"
+                  />
+                </label>
               </div>
-              <input
-                name="notes"
-                defaultValue={asset.notes ?? ""}
-                placeholder="Notes (optional)"
-                className="field"
-              />
-              <button className="btn w-full">Save changes</button>
+              <label className="block">
+                <span className="eyebrow text-[10px] text-muted">Notes</span>
+                <input
+                  name="notes"
+                  defaultValue={asset.notes ?? ""}
+                  placeholder="Optional"
+                  className="field mt-1.5"
+                />
+              </label>
+              <SubmitButton className="btn w-full">Save changes</SubmitButton>
             </form>
           </section>
 
@@ -357,7 +375,7 @@ export default async function AssetDetailPage({
               from the assets that remain.
             </p>
             <div className="mt-4">
-              <ConfirmDelete id={asset.id} label={asset.name} action={deleteAsset} noun="asset"
+              <ConfirmDelete id={asset.id} label={asset.name} action={deleteAsset} noun="asset" variant="button"
                 consequence="Its value history and any photos go with it — selling keeps all of that." />
             </div>
           </section>

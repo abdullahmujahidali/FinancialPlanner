@@ -4,12 +4,15 @@ import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { addAsset, revalueAsset, sellAsset, deleteAsset } from "@/actions/portfolio";
-import { pkr, todayStr } from "@/lib/money";
-import { Plus, Building2, ChevronRight, MoreHorizontal, Pencil } from "lucide-react";
+import { fmtDate, pkr, todayStr } from "@/lib/money";
+import { Plus, Building2, MoreHorizontal, Pencil } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { getBalances } from "@/lib/balances";
 import { getLoanNet, getLoans } from "@/lib/loans";
 import ConfirmDelete from "@/components/ConfirmDelete";
+import SubmitButton from "@/components/SubmitButton";
+import ErrorToast from "@/components/ErrorToast";
+import AmountInput from "@/components/AmountInput";
 
 export const dynamic = "force-dynamic";
 
@@ -78,34 +81,32 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
       wide
       title="Assets"
     >
-      {sp.e && (
-        <p className="mb-5 rounded-[14px] bg-blush px-4 py-3 text-sm font-bold text-ink">{sp.e}</p>
-      )}
+      <ErrorToast message={sp.e} />
 
       {/* ── Net worth zone ───────────────────────────────────────────────── */}
       <section className="zone-ink mb-5">
         <div className="flex items-baseline justify-between gap-3">
           <span className="eyebrow text-white/45">Net worth</span>
-          <span className="num text-[12px] font-bold text-white/45">{assets.length} assets</span>
+          <span className="num text-[12px] font-bold text-white/45">{active.length} owned{assets.length > active.length ? ` · ${assets.length - active.length} sold` : ""}</span>
         </div>
-        <div className="money-xl mt-4 text-[48px] text-acid lg:text-[68px]">{pkr(netWorth, { compact: true })}</div>
+        <div className="money-xl mt-4 whitespace-nowrap text-[clamp(34px,11vw,48px)] text-acid lg:text-[68px]">{pkr(netWorth, { compact: true })}</div>
 
         {/* Show the two halves, so the headline is checkable. */}
         <div className="mt-6 grid grid-cols-2 gap-3">
           <div className="rounded-[14px] bg-ink2 px-4 py-3">
-            <div className="eyebrow text-white/40">Money on hand</div>
-            <div className="money mt-1 text-[19px] font-extrabold text-white">
+            <div className="eyebrow truncate text-white/40">Money on hand</div>
+            <div className="money mt-1 whitespace-nowrap text-[clamp(15px,4.6vw,19px)] font-extrabold text-white">
               {pkr(cash, { compact: true })}
             </div>
             {cashUnknown && (
-              <Link href="/settings/accounts" className="mt-1 block text-[11px] font-bold text-blush underline">
-                some balances not set
+              <Link href="/settings/accounts" className="mt-1 block truncate text-[11px] font-bold text-blush underline">
+                Some balances not set
               </Link>
             )}
           </div>
           <div className="rounded-[14px] bg-ink2 px-4 py-3">
-            <div className="eyebrow text-white/40">Things owned · {active.length}</div>
-            <div className="money mt-1 text-[19px] font-extrabold text-white">
+            <div className="eyebrow truncate text-white/40">Things owned</div>
+            <div className="money mt-1 whitespace-nowrap text-[clamp(15px,4.6vw,19px)] font-extrabold text-white">
               {pkr(assetTotal, { compact: true })}
             </div>
           </div>
@@ -156,39 +157,42 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                     {/* The link and the delete button are siblings: a <form>
                         may never be nested inside an <a>. */}
                     <div className="flex items-start gap-2 p-5 lg:p-7">
+                      {/* Name on its own line so it is never squeezed by the
+                          figures; what it cost and what it is worth share the
+                          line below. */}
                       <Link
                         href={`/assets/${a.id}`}
-                        className="flex min-w-0 flex-1 items-start justify-between gap-4 rounded-[14px] transition hover:opacity-70"
+                        className="flex min-w-0 flex-1 items-start gap-4 rounded-[14px] transition hover:opacity-70"
                       >
-                        <div className="flex min-w-0 items-center gap-4">
-                          {photoByAsset.has(a.id) && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={`/api/attachment/${photoByAsset.get(a.id)}`} alt=""
-                              className="h-14 w-14 shrink-0 rounded-[14px] object-cover" />
-                          )}
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2 text-[16px] font-bold">
-                              <span className="truncate">{a.name}</span>
-                              {a.status === "sold" && <span className="tag-muted">sold</span>}
-                            </div>
-                            <div className="num mt-1.5 text-[13px] font-medium text-muted">
-                              Bought {a.purchaseDate.slice(0, 4)} for {pkr(Number(a.purchasePrice), { compact: true })}
-                            </div>
-                            {owedOn.has(a.id) && (
-                              <div className="num mt-1 text-[13px] font-bold text-over">
-                                {pkr(owedOn.get(a.id)!.outstanding, { compact: true })} left to pay · {owedOn.get(a.id)!.seller}
+                        {photoByAsset.has(a.id) && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={`/api/attachment/${photoByAsset.get(a.id)}`} alt=""
+                            className="h-14 w-14 shrink-0 rounded-[14px] object-cover" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 items-center gap-2 pt-1.5 text-[16px] font-bold">
+                            <span className="truncate">{a.name}</span>
+                            {a.status === "sold" && <span className="tag-muted shrink-0">sold</span>}
+                          </div>
+                          <div className="mt-3 flex items-end justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="num text-[13px] font-medium text-muted">
+                                {a.status === "sold" && a.soldDate ? `Sold ${fmtDate(a.soldDate)}` : `Bought ${fmtDate(a.purchaseDate)}`}
                               </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1.5 text-right">
-                          <div>
-                            <div className="money text-[20px] font-bold">{pkr(v.latest, { compact: true })}</div>
-                            <div className={"num mt-1 text-[13px] font-bold " + (delta >= 0 ? "text-good" : "text-over")}>
-                              {delta >= 0 ? "+" : ""}{pkr(delta, { compact: true })}
+                              {owedOn.has(a.id) && (
+                                <div className="num mt-1 text-[13px] font-bold text-over">
+                                  {pkr(owedOn.get(a.id)!.outstanding, { compact: true })} left to pay
+                                </div>
+                              )}
+                            </div>
+                            <div className="shrink-0 text-right">
+                              <div className="money whitespace-nowrap text-[20px] font-bold">{pkr(v.latest, { compact: true })}</div>
+                              <div className={"num mt-1 whitespace-nowrap text-[13px] font-bold " + (delta >= 0 ? "text-good" : "text-over")}>
+                                {delta >= 0 ? "+" : "−"}{pkr(Math.abs(delta), { compact: true })}
+                                <span className="font-medium text-muted"> since bought</span>
+                              </div>
                             </div>
                           </div>
-                          <ChevronRight size={17} strokeWidth={2.4} className="text-muted" />
                         </div>
                       </Link>
                       {/*
@@ -234,16 +238,16 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                           <form action={revalueAsset} className="flex gap-2.5">
                             <input type="hidden" name="assetId" value={a.id} />
                             <input type="hidden" name="valuedOn" value={todayStr()} />
-                            <input name="value" type="number" inputMode="numeric" placeholder="Value today"
-                              className="field num min-w-0 flex-1" />
-                            <button className="btn btn-sm shrink-0">Revalue</button>
+                            <AmountInput name="value" type="number" inputMode="numeric" placeholder="Value today"
+                              inputClassName="field num" className="min-w-0 flex-1" />
+                            <SubmitButton className="btn btn-sm shrink-0">Revalue</SubmitButton>
                           </form>
                           <form action={sellAsset} className="flex gap-2.5">
                             <input type="hidden" name="assetId" value={a.id} />
                             <input type="hidden" name="soldDate" value={todayStr()} />
-                            <input name="soldPrice" type="number" inputMode="numeric" placeholder="Sold for"
-                              className="field num min-w-0 flex-1" />
-                            <button className="btn-quiet btn-sm shrink-0">Sold</button>
+                            <AmountInput name="soldPrice" type="number" inputMode="numeric" placeholder="Sold for"
+                              inputClassName="field num" className="min-w-0 flex-1" />
+                            <SubmitButton className="btn-quiet btn-sm shrink-0">Sold</SubmitButton>
                           </form>
                         </div>
                         <Link href={`/assets/${a.id}#edit`}
@@ -286,7 +290,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
             <form action={addAsset} className="mt-6 space-y-4">
               <input name="name" placeholder="e.g. Car, house, or gold" className="field" required />
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <input name="purchasePrice" type="number" inputMode="numeric" placeholder="Purchase price" className="field num" required />
+                <AmountInput name="purchasePrice" type="number" inputMode="numeric" placeholder="Purchase price" inputClassName="field num" required />
                 <input name="purchaseDate" type="date" defaultValue={todayStr()} className="field" />
               </div>
               <input name="notes" placeholder="Notes (optional)" className="field" />
@@ -300,8 +304,8 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                 <div className="mt-3 space-y-3">
                   <input name="seller" placeholder="Paying whom? e.g. the dealer or seller" className="field" />
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <input name="paidSoFar" type="number" inputMode="numeric" step="0.01"
-                      placeholder="Paid so far, e.g. token" className="field num" />
+                    <AmountInput name="paidSoFar" type="number" inputMode="numeric" step="0.01"
+                      placeholder="Paid so far, e.g. token" inputClassName="field num" />
                     <input name="paidOn" type="date" defaultValue={todayStr()} className="field" />
                   </div>
                   <select name="paidFrom" className="field" defaultValue="">
@@ -318,10 +322,10 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                 <span className="eyebrow text-ink/55">Photo / papers — up to 2 MB</span>
                 <input name="photo" type="file" accept="image/*,.pdf" className="field mt-2 py-2.5" />
               </label>
-              <button className="btn w-full">
+              <SubmitButton className="btn w-full">
                 <Plus size={17} strokeWidth={2.75} />
                 Add asset
-              </button>
+              </SubmitButton>
             </form>
           </section>
         </div>

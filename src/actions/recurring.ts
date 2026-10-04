@@ -6,6 +6,7 @@ import { requireContext } from "@/lib/session";
 import { monthKey } from "@/lib/money";
 import { z } from "zod";
 import { f, ownsRefs, readForm } from "@/lib/forms";
+import { checkBudgetAlerts } from "@/lib/budget-alerts";
 
 const refresh = () => {
   revalidatePath("/"); revalidatePath("/ledger"); revalidatePath("/settings", "layout");
@@ -91,6 +92,7 @@ export async function postRecurring(formData: FormData) {
       db().update(t.recurring).set({ lastMonth: month }).where(eq(t.recurring.id, r.id))
     ]);
   }
+  await checkBudgetAlerts(household.id, [`${month}-01`]);
   refresh();
 }
 

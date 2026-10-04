@@ -6,6 +6,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { addRecurring, setRecurringArchived, updateRecurringAmount } from "@/actions/recurring";
 import { pkr } from "@/lib/money";
 import { Plus, Archive, ArchiveRestore, Check } from "lucide-react";
+import AmountInput from "@/components/AmountInput";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,7 @@ export default async function RegularSettings() {
       <form action={addRecurring} className="mb-6 rounded-[22px] bg-card p-5 lg:p-6">
         <div className="grid gap-3 sm:grid-cols-[1fr_9rem]">
           <input name="description" placeholder="e.g. Maid salary" className="field" required />
-          <input name="amount" type="number" inputMode="numeric" min="1" placeholder="Amount" className="field num" required />
+          <AmountInput name="amount" type="number" inputMode="numeric" min="1" placeholder="Amount" inputClassName="field num" required />
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="block">
@@ -102,9 +103,9 @@ export default async function RegularSettings() {
                   </span>
                   <form action={updateRecurringAmount} className="flex items-center gap-1.5">
                     <input type="hidden" name="id" value={r.id} />
-                    <input name="amount" type="number" inputMode="numeric" defaultValue={Number(r.amount)}
-                      aria-label={`Amount for ${r.description}`} className="field num w-28 !py-2" />
-                    <button className="btn-quiet btn-sm" aria-label="Save amount"><Check size={15} strokeWidth={2.8} /></button>
+                    <AmountInput name="amount" type="number" inputMode="numeric" defaultValue={Number(r.amount)}
+                      aria-label={`Amount for ${r.description}`} inputClassName="field num w-28 !py-2" hintPosition="none" />
+                    <SubmitButton className="btn-quiet btn-sm" aria-label="Save amount" savedLabel=""><Check size={15} strokeWidth={2.8} /></SubmitButton>
                   </form>
                   <form action={setRecurringArchived}>
                     <input type="hidden" name="id" value={r.id} />

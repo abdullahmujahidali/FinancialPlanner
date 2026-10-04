@@ -86,3 +86,31 @@ export function monthLabelShort(m: string) {
 export function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
+
+/**
+ * "2026-10-04" → "4 Oct 2026". ISO dates are for the database; every date a
+ * person reads goes through this so the pages agree with each other.
+ */
+export function fmtDate(d: string | null | undefined) {
+  if (!d) return "";
+  const x = new Date(d.slice(0, 10) + "T00:00:00");
+  if (Number.isNaN(x.getTime())) return d;
+  return x.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+/**
+ * What a typed amount says in words, for the hint beside money fields:
+ * 6500000 → "Rs 65 lakh". On a phone 650000 and 6500000 look alike; the words
+ * do not. Takes the currency explicitly because it runs in the browser, where
+ * the per-request `setCurrency` never happened.
+ */
+export function amountHint(v: number, code = "PKR") {
+  if (!isFinite(v) || v <= 0) return "";
+  const prev = current;
+  current = CURRENCIES[code] ?? CURRENCIES.PKR;
+  try {
+    return v >= 1000 ? pkr(v, { compact: true }) : pkr(v);
+  } finally {
+    current = prev;
+  }
+}

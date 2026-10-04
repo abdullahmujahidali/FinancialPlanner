@@ -5,6 +5,7 @@ import { postRecurring, skipRecurring } from "@/actions/recurring";
 import SubmitButton from "@/components/SubmitButton";
 
 import { Repeat } from "lucide-react";
+import AmountInput from "@/components/AmountInput";
 
 /**
  * This month's regular payments not yet added or skipped. Everything is
@@ -38,8 +39,8 @@ export default async function RegularDue({ householdId, month }: { householdId: 
                 <span className="block truncate text-[15px] font-semibold">{r.description}</span>
                 <span className="text-[12px] font-bold text-muted">day {r.dayOfMonth}</span>
               </span>
-              <input name={`amount_${r.id}`} type="number" inputMode="numeric" defaultValue={Number(r.amount)}
-                aria-label={`Amount for ${r.description}`} className="field num w-28 shrink-0 !py-2" />
+              <AmountInput name={`amount_${r.id}`} type="number" inputMode="numeric" defaultValue={Number(r.amount)}
+                aria-label={`Amount for ${r.description}`} inputClassName="field num w-28 !py-2" hintPosition="none" className="shrink-0" />
               <button name="skip" value={r.id} formAction={skipRecurring} formNoValidate
                 title="Not this month" className="shrink-0 text-[12px] font-bold text-muted hover:text-ink">
                 Skip

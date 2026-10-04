@@ -6,6 +6,8 @@ import { db, t } from "@/db/client";
 import { and, desc, eq, isNull, ne, or } from "drizzle-orm";
 import { markAllRead, markRead, markUnread, dismiss, clearAll } from "@/actions/notifications";
 import { Bell, Upload, Inbox, Wallet, Target, Building2, Check, Dot, X, CheckCheck, Trash2 } from "lucide-react";
+import SubmitButton from "@/components/SubmitButton";
+import { alertTone } from "@/lib/tiers";
 
 export const dynamic = "force-dynamic";
 
@@ -87,18 +89,18 @@ export default async function NotificationsPage({
 
         {unread > 0 && (
           <form action={markAllRead}>
-            <button className="btn-quiet btn-sm">
+            <SubmitButton className="btn-quiet btn-sm" savedLabel="">
               <CheckCheck size={15} strokeWidth={2.3} />
               Mark all read
-            </button>
+            </SubmitButton>
           </form>
         )}
         {read > 0 && (
           <form action={clearAll}>
-            <button className="btn-quiet btn-sm">
+            <SubmitButton className="btn-quiet btn-sm" savedLabel="">
               <Trash2 size={15} strokeWidth={2.3} />
               Clear read
-            </button>
+            </SubmitButton>
           </form>
         )}
       </div>
@@ -130,7 +132,7 @@ export default async function NotificationsPage({
                 <span
                   className={
                     "mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full " +
-                    (n.readAt ? "bg-page text-muted" : "bg-acid text-ink")
+                    (n.readAt ? "bg-page text-muted" : alertTone(n.href) ?? "bg-acid text-ink")
                   }
                 >
                   <Icon size={19} strokeWidth={2.1} />

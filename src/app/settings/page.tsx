@@ -5,6 +5,7 @@ import { db, t } from "@/db/client";
 import { and, eq, sql } from "drizzle-orm";
 import { logout } from "@/actions/auth";
 import { Home, Landmark, Tags, Users, UserCog, Wand2, ChevronRight, LogOut, KeyRound, Repeat, PieChart, Gift } from "lucide-react";
+import SubmitButton from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -144,10 +145,10 @@ export default async function SettingsHub() {
         <p className="text-[13px] font-semibold text-muted">Signed in as</p>
         <p className="mt-0.5 truncate text-[15px] font-bold">{user.email}</p>
         <form action={logout} className="mt-4">
-          <button className="btn-quiet w-full">
+          <SubmitButton className="btn-quiet w-full">
             <LogOut size={17} strokeWidth={2.2} />
             Sign out
-          </button>
+          </SubmitButton>
         </form>
       </div>
 

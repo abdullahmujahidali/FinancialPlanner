@@ -1,6 +1,7 @@
 "use client";
 import { Modal, useOverlayState } from "@heroui/react";
 import { Trash2 } from "lucide-react";
+import SubmitButton from "@/components/SubmitButton";
 
 /**
  * Delete confirmation for a ledger row.
@@ -17,7 +18,8 @@ export default function ConfirmDelete({
   label,
   action,
   noun = "entry",
-  consequence
+  consequence,
+  variant = "icon"
 }: {
   id: number;
   label: string;
@@ -34,6 +36,8 @@ export default function ConfirmDelete({
    * assumed was safe.
    */
   consequence?: string;
+  /** "button" spells out "Delete <noun>" — for a page's own delete section. */
+  variant?: "icon" | "button";
 }) {
   const state = useOverlayState();
 
@@ -43,9 +47,12 @@ export default function ConfirmDelete({
         type="button"
         onClick={state.open}
         aria-label={`Delete ${label}`}
-        className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition hover:bg-blush hover:text-ink"
+        className={variant === "button"
+          ? "btn-quiet w-full gap-2 bg-card"
+          : "flex h-9 w-9 items-center justify-center rounded-full text-muted transition hover:bg-blush hover:text-ink"}
       >
         <Trash2 size={15} strokeWidth={2.2} />
+        {variant === "button" && <span>Delete {noun}</span>}
       </button>
 
       <Modal state={state}>
@@ -72,7 +79,7 @@ export default function ConfirmDelete({
               </button>
               <form action={action} className="flex-1">
                 <input type="hidden" name="id" value={id} />
-                <button className="btn w-full">Delete</button>
+                <SubmitButton className="btn w-full" savedLabel="">Delete</SubmitButton>
               </form>
             </Modal.Footer>
           </Modal.Dialog>

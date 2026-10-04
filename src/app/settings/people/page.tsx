@@ -5,6 +5,7 @@ import { db, t } from "@/db/client";
 import { asc, eq } from "drizzle-orm";
 import { addPerson, renamePerson } from "@/actions/admin";
 import { Plus } from "lucide-react";
+import SubmitButton from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -36,10 +37,10 @@ export default async function PeopleSettings() {
           className="field min-w-0 flex-1"
           required
         />
-        <button className="btn shrink-0 gap-1.5 px-4">
+        <SubmitButton className="btn shrink-0 gap-1.5 px-4">
           <Plus size={17} strokeWidth={2.75} />
           <span className="hidden sm:inline">Add</span>
-        </button>
+        </SubmitButton>
       </form>
 
       <div className="overflow-hidden rounded-[22px] bg-card">

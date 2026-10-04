@@ -24,6 +24,14 @@
   --color-line: #E7E7E3;
   --color-good: #1F7A4D;
   --color-over: #C43C22;
+  /* Where a month stands (src/lib/tiers.ts): cool when well under, hotter as
+     spend climbs, near-black red when far past the budget. */
+  --color-tier-blue: #4C7DF0;
+  --color-tier-green: #23955C;
+  --color-tier-yellow: #F4CF3A;
+  --color-tier-orange: #F28C38;
+  --color-tier-red: #DD4B32;
+  --color-tier-darkred: #8E1B1B;
 
   --font-display: var(--font-display), system-ui, sans-serif;
   --font-sans: var(--font-sans), system-ui, sans-serif;
@@ -41,7 +49,7 @@
   :root { color-scheme: light; --sb: 216px; }
   :root[data-sb="c"] { --sb: 76px; }
   html { background: var(--color-page); }
-  body { @apply bg-page text-ink antialiased; }
+  body { @apply bg-page text-ink antialiased; -webkit-tap-highlight-color: transparent; }
   h1, h2, h3 { @apply font-display tracking-[-0.025em]; }
 }
 
@@ -85,6 +93,18 @@
     @apply border-ink;
     box-shadow: 0 0 0 3px rgb(14 14 14 / 0.08);
   }
+
+  /* File picker: the browser's grey "Choose File" button, restyled as a chip. */
+  .field[type="file"] { @apply py-2.5 text-[13px] text-muted; }
+  .field::file-selector-button {
+    @apply mr-3 cursor-pointer rounded-full border-0 bg-page px-3.5 py-1.5 text-[13px] font-bold text-ink transition;
+  }
+  .field::file-selector-button:hover { @apply bg-line; }
+
+  /* Money is typed, never nudged by 1 — the spinner arrows only invite mistakes. */
+  .field[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+  .field[type="number"]::-webkit-inner-spin-button,
+  .field[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-full bg-ink px-5 py-3

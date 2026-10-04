@@ -9,6 +9,7 @@ import { addComment, deleteComment, toggleReaction } from "@/actions/comments";
 import CommentThread, { groupThreads } from "@/components/CommentThread";
 import { pkr } from "@/lib/money";
 import { Check } from "lucide-react";
+import SubmitButton from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -162,7 +163,7 @@ export default async function ReviewPage() {
                   remember as a rule
                 </label>
 
-                <button className="btn btn-sm ml-auto shrink-0">Save</button>
+                <SubmitButton className="btn btn-sm ml-auto shrink-0">Save</SubmitButton>
               </div>
             </form>
 

@@ -5,10 +5,13 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import Link from "next/link";
 import { addLoan, addLoanPayment, deleteLoan } from "@/actions/loans";
 import { getLoans, type LoanRow } from "@/lib/loans";
-import { pkr, todayStr } from "@/lib/money";
+import { fmtDate, pkr, todayStr } from "@/lib/money";
 import { Plus, HandCoins, Check } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import ConfirmDelete from "@/components/ConfirmDelete";
+import SubmitButton from "@/components/SubmitButton";
+import ErrorToast from "@/components/ErrorToast";
+import AmountInput from "@/components/AmountInput";
 
 export const dynamic = "force-dynamic";
 
@@ -55,9 +58,7 @@ export default async function LoansPage({
 
   return (
     <Shell back={{ href: "/", label: "Home" }} wide title="Loans">
-      {sp.e && (
-        <p className="mb-5 rounded-[14px] bg-blush px-4 py-3 text-sm font-bold text-ink">{sp.e}</p>
-      )}
+      <ErrorToast message={sp.e} />
 
       {/* ── The two totals ───────────────────────────────────────────────── */}
       <section className="zone-ink mb-5">
@@ -159,13 +160,13 @@ export default async function LoansPage({
                 className="field"
                 required
               />
-              <input
+              <AmountInput
                 name="principal"
                 type="number"
                 inputMode="numeric"
                 step="0.01"
                 placeholder="Amount"
-                className="field num"
+                inputClassName="field num"
                 required
               />
               <div className="grid grid-cols-2 gap-3">
@@ -184,10 +185,10 @@ export default async function LoansPage({
                 </label>
               </div>
               <input name="note" placeholder="What was it for?" className="field" />
-              <button className="btn w-full">
+              <SubmitButton className="btn w-full">
                 <Plus size={17} strokeWidth={2.75} />
                 Add loan
-              </button>
+              </SubmitButton>
             </form>
           </section>
         </div>
@@ -287,8 +288,8 @@ function LoanGroup({
                     </summary>
                     <form action={addLoanPayment} className="mt-3 grid gap-2.5 sm:grid-cols-[1fr_150px]">
                       <input type="hidden" name="loanId" value={l.id} />
-                      <input name="amount" type="number" inputMode="numeric" step="0.01" required
-                        placeholder="Amount" className="field num" />
+                      <AmountInput name="amount" type="number" inputMode="numeric" step="0.01" required
+                        placeholder="Amount" inputClassName="field num" />
                       <input name="paidOn" type="date" defaultValue={todayStr()} className="field" />
                       <select name="accountId" className="field sm:col-span-2" defaultValue="">
                         <option value="">Cash — no bank account</option>
@@ -301,9 +302,9 @@ function LoanGroup({
                       <p className="text-[12px] leading-snug text-muted sm:col-span-2">
                         Picking a bank adds a transfer to the ledger so its balance stays right — or, if the bank import already has this payment, turns that row into the transfer. Never counted as spending.
                       </p>
-                      <button className="btn sm:col-span-2">
+                      <SubmitButton className="btn sm:col-span-2">
                         <Check size={16} strokeWidth={3} /> Save
-                      </button>
+                      </SubmitButton>
                     </form>
                   </details>
                 ) : <span className="flex-1" />}
@@ -327,9 +328,4 @@ function LoanGroup({
       </div>
     </section>
   );
-}
-
-/** "2026-09-26" → "26 Sep 2026": ISO dates are for databases, not people. */
-function fmtDate(d: string) {
-  return new Date(d + "T00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }

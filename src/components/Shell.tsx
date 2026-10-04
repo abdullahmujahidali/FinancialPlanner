@@ -59,7 +59,8 @@ export default async function Shell({
   ]);
 
   return (
-    <div className="transition-[padding] duration-200 lg:pl-[var(--sb)]">
+    // data-currency: read by client components (AmountInput) that format money.
+    <div data-currency={household.currency} className="transition-[padding] duration-200 lg:pl-[var(--sb)]">
       <Sidebar
         collapsed={collapsed}
         household={household.name}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Pencil, Check, X, Archive, ArchiveRestore } from "lucide-react";
+import SubmitButton from "@/components/SubmitButton";
 
 /**
  * A settings list row that can be renamed in place and archived.
@@ -63,9 +64,9 @@ export default function EditableRow({
               Pass-through
             </label>
           )}
-          <button className="btn btn-sm shrink-0" aria-label="Save">
+          <SubmitButton className="btn btn-sm shrink-0" aria-label="Save" savedLabel="">
             <Check size={15} strokeWidth={2.8} />
-          </button>
+          </SubmitButton>
           <button
             type="button"
             onClick={() => setEditing(false)}

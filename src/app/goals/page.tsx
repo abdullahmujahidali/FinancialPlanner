@@ -3,10 +3,13 @@ import { requireContext } from "@/lib/session";
 import { db, t } from "@/db/client";
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { addGoal, contributeToGoal, completeGoal } from "@/actions/portfolio";
-import { pkr, monthKey, monthLabel, monthRange } from "@/lib/money";
+import { fmtDate, pkr, monthKey, monthLabel, monthRange } from "@/lib/money";
 import { Plus, Check, Target } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { getGoalForecasts, etaLabel } from "@/lib/forecast";
+import SubmitButton from "@/components/SubmitButton";
+import ErrorToast from "@/components/ErrorToast";
+import AmountInput from "@/components/AmountInput";
 
 export const dynamic = "force-dynamic";
 
@@ -56,9 +59,7 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
   return (
     <Shell
       back={{ href: "/", label: "Home" }} wide title="Goals">
-      {sp.e && (
-        <p className="mb-5 rounded-[14px] bg-blush px-4 py-3 text-sm font-bold">{sp.e}</p>
-      )}
+      <ErrorToast message={sp.e} />
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
         {/* ── Goal cards ───────────────────────────────────────────────── */}
@@ -78,11 +79,11 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
                     <option key={g.id} value={g.id}>{g.name}</option>
                   ))}
                 </select>
-                <input name="amount" type="number" inputMode="numeric" defaultValue={leftover} max={leftover}
-                  className="field num" />
-                <button className="btn px-4">
+                <AmountInput name="amount" type="number" inputMode="numeric" defaultValue={leftover} max={leftover}
+                  inputClassName="field num" />
+                <SubmitButton className="btn px-4">
                   <Plus size={17} strokeWidth={2.75} /> Add
-                </button>
+                </SubmitButton>
               </form>
             </section>
           )}
@@ -127,7 +128,7 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
                     </span>
                   </div>
                   {g.deadline && (
-                    <div className="eyebrow mt-2 text-muted">by {g.deadline}</div>
+                    <div className="eyebrow mt-2 text-muted">by {fmtDate(g.deadline)}</div>
                   )}
                   <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-page">
                     <div className="h-full rounded-full bg-acid" style={{ width: `${pct}%` }} />
@@ -167,10 +168,10 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
                       </summary>
                       <form action={contributeToGoal} className="mt-3 grid gap-2.5 sm:grid-cols-[1fr_1fr_auto]">
                         <input type="hidden" name="goalId" value={g.id} />
-                        <input name="amount" type="number" inputMode="numeric" placeholder="Amount" required
-                          className="field num" />
+                        <AmountInput name="amount" type="number" inputMode="numeric" placeholder="Amount" required
+                          inputClassName="field num" />
                         <input name="note" placeholder="Note (optional)" className="field" />
-                        <button className="btn px-5">Save</button>
+                        <SubmitButton className="btn px-5">Save</SubmitButton>
                       </form>
                     </details>
                     <details className="min-w-0">
@@ -184,8 +185,8 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
                           Add what was bought as an asset
                         </label>
                         <input name="assetName" placeholder="Asset name, e.g. New car" className="field" />
-                        <input name="purchasePrice" type="number" inputMode="numeric" placeholder="Price paid" className="field num" />
-                        <button className="btn w-full">Mark goal complete</button>
+                        <AmountInput name="purchasePrice" type="number" inputMode="numeric" placeholder="Price paid" inputClassName="field num" />
+                        <SubmitButton className="btn w-full">Mark goal complete</SubmitButton>
                       </form>
                     </details>
                   </div>
@@ -202,14 +203,14 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
             <form action={addGoal} className="mt-6 space-y-4">
               <input name="name" placeholder="e.g. New car, emergency fund" className="field" required />
               <div className="grid grid-cols-2 gap-3">
-                <input name="targetAmount" type="number" inputMode="numeric" placeholder="Target (PKR)"
-                  className="field num" required />
+                <AmountInput name="targetAmount" type="number" inputMode="numeric" placeholder="Target (PKR)"
+                  inputClassName="field num" required />
                 <input name="deadline" type="date" className="field" />
               </div>
-              <button className="btn w-full">
+              <SubmitButton className="btn w-full">
                 <Plus size={17} strokeWidth={2.75} />
                 Add goal
-              </button>
+              </SubmitButton>
             </form>
           </section>
         </div>
